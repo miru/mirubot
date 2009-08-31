@@ -15,7 +15,7 @@ class TwitterBot
       if getfrom >= status.created_at
         return
       end
-      #puts "("+status.created_at.to_s+")"+status.user.screen_name+": "+status.text
+      puts "("+status.created_at.to_s+")"+status.user.screen_name+": "+status.text
       if status.user.screen_name != "mirubot"
         self.extu status
         self.nya status
@@ -88,14 +88,14 @@ class TwitterBot
 
   def post message
     @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
-    #puts "### "+message
+    puts "### "+message
   end
 
 end
 
 
 # main
-client=Twitter::Client.from_config('./mirubot-conf.yaml','bot')
+client=Twitter::Client.from_config('/home/miru/bin/mirubot-conf.yaml','bot')
 bot=TwitterBot.new client
 
 bot.run
