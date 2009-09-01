@@ -29,7 +29,6 @@ class TwitterBot
 				# puts "("+status.created_at.to_s+")"+status.user.screen_name+": "+status.text
 				if status.user.screen_name != "mirubot"
 					self.autoreply status
-					self.mention status
 				end
 
 				time = Time.now
