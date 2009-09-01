@@ -15,7 +15,6 @@ class TwitterBot
 		@workingmin = 30
 		@workingth = 10
 		@timewait = 60*10
-		@@autoreplyflg = false
 		@autoreplyflg = false
 	end
 
@@ -26,7 +25,7 @@ class TwitterBot
 				if getfrom >= status.created_at
 					return
 				end
-				# puts "("+status.created_at.to_s+")"+status.user.screen_name+": "+status.text
+				puts "<<get timeline ("+status.created_at.to_s+")"+status.user.screen_name+": "+status.text
 				if status.user.screen_name != "mirubot"
 					self.autoreply status
 				end
@@ -106,7 +105,7 @@ class TwitterBot
 
 	def post message
 		@client.status(:post,Kconv.kconv(message,Kconv::UTF8))
-		#puts "### "+message
+		puts ">>send message: "+message
 	end
 end
 
