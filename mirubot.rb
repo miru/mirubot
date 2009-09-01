@@ -32,10 +32,10 @@ class TwitterBot
 					self.mention status
 				end
 
-#				time = Time.now
-#				if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 17)
+				time = Time.now
+				if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 17)
 					self.workingnow
-#				end
+				end
 			end
 		end
 		sleep @timewait
@@ -68,7 +68,7 @@ class TwitterBot
 
 	# えっ
 	def autoreply status
-		if autoreplyflg == false
+		if @autoreplyflg == false
 			if status.text =~ /(えっ|えっ？)$/
 				message = "@"+status.user.screen_name+" えっ？"
 				post message
@@ -89,23 +89,18 @@ class TwitterBot
 				message = "@"+status.user.screen_name+" おいしそーです (￣￢￣)ジュル"
 				post message
 				@autoreplyflg = true
+			elseif status.text =~ /^\@mirubot .*ありがと/
+				message = "@"+status.user.screen_name+" どういたしましてなのよ ＞ω＜"
+				mentionflg = true
+			elseif status.text =~ /^\@mirubot .*(かわい|可愛い)/
+				message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
+				post message
+				mentionflg = true
+			elseif status.text =~ /^\@mirubot /
+				message = "@"+status.user.screen_name+" ヾ（｡＞‿＜｡ ）さみしいの？"
+				post message
+				mentionflg = true
 			end
-		end
-	end
-
-  # mention reply
-	def mention status
-		if status.text =~ /^\@mirubot .*ありがと/
-			message = "@"+status.user.screen_name+" どういたしましてなのよ ＞ω＜"
-			mentionflg = true
-		elseif status.text =~ /^\@mirubot .*(かわい|可愛い)/
-			message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
-			post message
-			mentionflg = true
-		elseif status.text =~ /^\@mirubot /
-			message = "@"+status.user.screen_name+" ヾ（｡＞‿＜｡ ）さみしいの？"
-			post message
-			mentionflg = true
 		end
 	end
 
