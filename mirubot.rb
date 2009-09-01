@@ -104,6 +104,10 @@ class TwitterBot
 				message = "@"+status.user.screen_name+" ぺろぺろしすぎに注意しましょうね"
 				post message
 				@autoreplyflg = true
+			elsif status.text =~ /(いたい|痛い|頭痛|腰痛|胃痛)/
+				message = "@"+status.user.screen_name+" いたいのいたいのとんでけー ＞＜"
+				post message
+				@autoreplyflg = true
 			elsif status.text =~ /(mogmog|gokgok)/
 				message = "@"+status.user.screen_name+" おいしそーです (￣￢￣)ジュル"
 				post message
