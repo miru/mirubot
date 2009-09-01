@@ -40,7 +40,7 @@ class TwitterBot
 					self.workingnow
 				end
 			end
-			puts "## sleep" << Time.now.strftime("%H:%M:%S")
+			puts "## sleep" << Time.now.strftime("%H:%M:%S") << " " << @timewait.to_s << "sec"
 			sleep(@timewait)
 		end
 	end
