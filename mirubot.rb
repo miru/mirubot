@@ -30,14 +30,17 @@ class TwitterBot
 				puts "<<get TL("+status.created_at.strftime("%H:%M:%S")+") "+status.user.screen_name+": "+status.text
 
 				if status.user.screen_name != "mirubot"
+					puts "## autoreply"
 					self.autoreply status
 				end
 
 				time = Time.now
 				if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 17)
+					puts "## workingnow"
 					self.workingnow
 				end
 			end
+			puts "## sleep" << Time.now.strftime("%H:%M:%S")
 			sleep(@timewait)
 		end
 	end
