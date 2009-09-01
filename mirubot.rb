@@ -25,7 +25,7 @@ class TwitterBot
 				if getfrom >= status.created_at
 					return
 				end
-				puts "<<get timeline ("+status.created_at.hour+status.created_at.min+")"+status.user.screen_name+": "+status.text
+				puts "<<get timeline ("+status.created_at.hour.to_s+status.created_at.min.to_s+")"+status.user.screen_name+": "+status.text
 				if status.user.screen_name != "mirubot"
 					self.autoreply status
 				end
