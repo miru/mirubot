@@ -15,7 +15,7 @@ class TwitterBot
 		@workingmin = 30
 		@workingth = 10
 		@timewait = 60*10
-		@mentionflg = false
+		@@autoreplyflg = false
 		@autoreplyflg = false
 	end
 
@@ -36,8 +36,8 @@ class TwitterBot
 					self.workingnow
 				end
 			end
+			sleep @timewait
 		end
-		sleep @timewait
 	end
 
 	def workingnow
@@ -90,16 +90,17 @@ class TwitterBot
 				@autoreplyflg = true
 			elseif status.text =~ /^\@mirubot .*ありがと/
 				message = "@"+status.user.screen_name+" どういたしましてなのよ ＞ω＜"
-				mentionflg = true
+				@autoreplyflg = true
 			elseif status.text =~ /^\@mirubot .*(かわい|可愛い)/
 				message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
 				post message
-				mentionflg = true
+				@autoreplyflg = true
 			elseif status.text =~ /^\@mirubot /
 				message = "@"+status.user.screen_name+" ヾ（｡＞‿＜｡ ）さみしいの？"
 				post message
-				mentionflg = true
+				@autoreplyflg = true
 			end
+			
 		end
 	end
 
