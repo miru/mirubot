@@ -30,7 +30,6 @@ class TwitterBot
 				puts "<<get TL("+status.created_at.strftime("%H:%M:%S")+") "+status.user.screen_name+": "+status.text
 
 				if status.user.screen_name != "mirubot"
-					puts "## autoreply"
 					self.autoreply status
 				end
 
@@ -77,7 +76,7 @@ class TwitterBot
 				message = "@"+status.user.screen_name+" なにそれこわい"
 				post message
 				@autoreplyflg = true
-			elsif status.text =~ /(えっ|えっ？)$/
+			elsif status.text =~ /(えっ|えっ？|え？)$/
 				message = "@"+status.user.screen_name+" えっ？"
 				post message
 				@autoreplyflg = true
@@ -91,6 +90,18 @@ class TwitterBot
 				@autoreplyflg = true
 			elsif status.text =~ /ぱっつん/
 				message = "@"+status.user.screen_name+" ぱっつんと聞いて！"
+				post message
+				@autoreplyflg = true
+			elsif status.text =~ /(べっど|ベッド|布団|ふとん)/
+				message = "@"+status.user.screen_name+" おふとんもふもふー＞ω＜！"
+				post message
+				@autoreplyflg = true
+			elsif status.text =~ /もふもふ/
+				message = "@"+status.user.screen_name+" もっふもふにしてやんよーっ！"
+				post message
+				@autoreplyflg = true
+			elsif status.text =~ /ぺろぺろ/
+				message = "@"+status.user.screen_name+" ぺろぺろしすぎに注意しましょうね"
 				post message
 				@autoreplyflg = true
 			elsif status.text =~ /(mogmog|gokgok)/
