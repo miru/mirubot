@@ -14,14 +14,14 @@ class TwitterBot
 		@count = 0
 		@workingmin = 30
 		@workingth = 10
-		@timewait = 60*10
+		@timewait = 60*5
 		@autoreplyflg = false
 		@finflg = true
 	end
 
 	def run
 		while @finflg
-			getfrom = Time.now - @timewait
+			getfrom = Time.now - @timewait + 3
 			timeline=@client.timeline_for(:friends, :count => 200) do |status|
 				if status.created_at <= getfrom
 					next
@@ -70,7 +70,7 @@ class TwitterBot
 	# えっ
 	def autoreply status
 		if @autoreplyflg == false
-			if status.text =~ /^\@mirubot (えっ|えっ？)$/
+			if status.text =~ /^@mirubot (えっ|えっ？)$/
 				message = "@"+status.user.screen_name+" なにそれこわい"
 				post message
 				@autoreplyflg = true
@@ -94,14 +94,14 @@ class TwitterBot
 				message = "@"+status.user.screen_name+" おいしそーです (￣￢￣)ジュル"
 				post message
 				@autoreplyflg = true
-			elseif status.text =~ /^\@mirubot .*ありがと/
+			elseif status.text =~ /^@mirubot .*ありがと/
 				message = "@"+status.user.screen_name+" どういたしましてなのよ ＞ω＜"
 				@autoreplyflg = true
-			elseif status.text =~ /^\@mirubot .*(かわい|可愛い)/
+			elseif status.text =~ /^@mirubot .*(かわい|可愛)/
 				message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
 				post message
 				@autoreplyflg = true
-			elseif status.text =~ /^\@mirubot /
+			elseif status.text =~ /^@mirubot /
 				message = "@"+status.user.screen_name+" ヾ（｡＞‿＜｡ ）さみしいの？"
 				post message
 				@autoreplyflg = true
