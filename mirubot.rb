@@ -12,8 +12,8 @@ class TwitterBot
 	def initialize client
 		@client = client
 		@count = 0
-		@min = 30
-		@th = 10
+		@workingmin = 30
+		@workingth = 10
 		@mentionflg = false
 		@autoreplyflg = false
 	end
@@ -37,23 +37,23 @@ class TwitterBot
 #				end
 			end
 		end
+		sleep 60*10
 	end
 
 	def workingnow
 		friends = @client.my(:friends)
 		for user in friends
 			self.countpost user.screen_name
-			if @count > @th
+			if @count > @workingth
 				message = "@" << user.screen_name << " お仕事してくださいね "
-				message = message << "(" << @min.to_s << "分で" << @count.to_s << "ポスト)"
-				#puts message
+				message = message << "(" << @workingmin.to_s << "分で" << @count.to_s << "ポスト)"
 				post message
 			end
 		end
 	end
 
 	def countpost user
-		getfrom=Time.now-60*@min
+		getfrom=Time.now-60*@workingmin
 		@count = 0
 		userrss = 'http://twitter.com/status/user_timeline/' << user << '.rss'
 		rss = RSS::Parser.parse(userrss)
