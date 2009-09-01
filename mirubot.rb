@@ -14,13 +14,14 @@ class TwitterBot
 		@count = 0
 		@workingmin = 30
 		@workingth = 10
+		@timewait = 60*10
 		@mentionflg = false
 		@autoreplyflg = false
 	end
 
 	def run
 		while 1
-			getfrom = Time.now - 60*10
+			getfrom = Time.now - @timewait
 			timeline=@client.timeline_for(:friends, :count => 200) do |status|
 				if getfrom >= status.created_at
 					return
@@ -32,12 +33,12 @@ class TwitterBot
 				end
 
 #				time = Time.now
-#				if time.hour > 9 && time.hour < 18
+#				if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 17)
 					self.workingnow
 #				end
 			end
 		end
-		sleep 60*10
+		sleep @timewait
 	end
 
 	def workingnow
