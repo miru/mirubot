@@ -37,8 +37,8 @@ class TwitterBot
 				if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 17)
 					self.workingnow
 				end
-				sleep(@timewait)
 			end
+			sleep(@timewait)
 		end
 	end
 
