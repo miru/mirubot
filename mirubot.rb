@@ -19,10 +19,10 @@ class TwitterBot
 	end
 
 	def run
-		while true
+		while (true)
 			getfrom = Time.now - @timewait
 			timeline=@client.timeline_for(:friends, :count => 200) do |status|
-				if getfrom >= status.created_at
+				if status.created_at <= getfrom
 					return
 				end
 				puts "<<get TL("+status.created_at.hour.to_s+status.created_at.min.to_s+") "+status.user.screen_name+": "+status.text
