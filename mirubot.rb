@@ -74,34 +74,34 @@ class TwitterBot
 				message = "@"+status.user.screen_name+" なにそれこわい"
 				post message
 				@autoreplyflg = true
-			elseif status.text =~ /(えっ|えっ？)$/
+			elsif status.text =~ /(えっ|えっ？)$/
 				message = "@"+status.user.screen_name+" えっ？"
 				post message
 				@autoreplyflg = true
-			elseif status.text =~ /にゃん$/
+			elsif status.text =~ /にゃん$/
 				message = "@"+status.user.screen_name+" にゃんにゃんФωФ"
 				post message
 				@autoreplyflg = true
-			elseif status.text =~ /本気/
+			elsif status.text =~ /本気/
 				message = "@"+status.user.screen_name+" 本気ですか！頑張ってくださいね ｡＞‿＜｡"
 				post message
 				@autoreplyflg = true
-			elseif status.text =~ /ぱっつん/
+			elsif status.text =~ /ぱっつん/
 				message = "@"+status.user.screen_name+" ぱっつんと聞いて！"
 				post message
 				@autoreplyflg = true
-			elseif status.text =~ /(mogmog|gokgok)/
+			elsif status.text =~ /(mogmog|gokgok)/
 				message = "@"+status.user.screen_name+" おいしそーです (￣￢￣)ジュル"
 				post message
 				@autoreplyflg = true
-			elseif status.text =~ /^@mirubot .*ありがと/
+			elsif status.text =~ /^@mirubot .*ありがと/
 				message = "@"+status.user.screen_name+" どういたしましてなのよ ＞ω＜"
 				@autoreplyflg = true
-			elseif status.text =~ /^@mirubot .*(かわい|可愛)/
+			elsif status.text =~ /^@mirubot .*(かわい|可愛)/
 				message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
 				post message
 				@autoreplyflg = true
-			elseif status.text =~ /^@mirubot /
+			elsif status.text =~ /^@mirubot /
 				message = "@"+status.user.screen_name+" ヾ（｡＞‿＜｡ ）さみしいの？"
 				post message
 				@autoreplyflg = true
