@@ -16,10 +16,11 @@ class TwitterBot
 		@workingth = 10
 		@timewait = 60*10
 		@autoreplyflg = false
+		@finflg = false
 	end
 
 	def run
-		while (true)
+		while @finflg == false
 			getfrom = Time.now - @timewait
 			timeline=@client.timeline_for(:friends, :count => 200) do |status|
 				if status.created_at <= getfrom
