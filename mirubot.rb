@@ -19,13 +19,13 @@ class TwitterBot
 	end
 
 	def run
-		while 1
+		while true
 			getfrom = Time.now - @timewait
 			timeline=@client.timeline_for(:friends, :count => 200) do |status|
 				if getfrom >= status.created_at
 					return
 				end
-				puts "<<get timeline ("+status.created_at.to_s+")"+status.user.screen_name+": "+status.text
+				puts "<<get timeline ("+status.created_at.hour+status.created_at.min+")"+status.user.screen_name+": "+status.text
 				if status.user.screen_name != "mirubot"
 					self.autoreply status
 				end
@@ -67,7 +67,11 @@ class TwitterBot
 	# えっ
 	def autoreply status
 		if @autoreplyflg == false
-			if status.text =~ /(えっ|えっ？)$/
+			if status.text =~ /^\@mirubot (えっ|えっ？)$/
+				message = "@"+status.user.screen_name+" なにそれこわい"
+				post message
+				@autoreplyflg = true
+			elseif status.text =~ /(えっ|えっ？)$/
 				message = "@"+status.user.screen_name+" えっ？"
 				post message
 				@autoreplyflg = true
