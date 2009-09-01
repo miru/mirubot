@@ -16,17 +16,19 @@ class TwitterBot
 		@workingth = 10
 		@timewait = 60*10
 		@autoreplyflg = false
-		@finflg = false
+		@finflg = true
 	end
 
 	def run
-		while @finflg == false
+		while @finflg
 			getfrom = Time.now - @timewait
 			timeline=@client.timeline_for(:friends, :count => 200) do |status|
 				if status.created_at <= getfrom
-					return
+					next
 				end
-				puts "<<get TL("+status.created_at.hour.to_s+status.created_at.min.to_s+") "+status.user.screen_name+": "+status.text
+
+				puts "<<get TL("+status.created_at.strftime("%H:%M:%S")+") "+status.user.screen_name+": "+status.text
+
 				if status.user.screen_name != "mirubot"
 					self.autoreply status
 				end
@@ -35,8 +37,8 @@ class TwitterBot
 				if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 17)
 					self.workingnow
 				end
+				sleep(@timewait)
 			end
-			sleep(@timewait)
 		end
 	end
 
