@@ -13,7 +13,7 @@ class TwitterBot
 		@client = client
 		@count = 0
 		@workingmin = 30
-		@workingth = 20
+		@workingth = 15
 		@timewait = 60*5
 		@autoreplyflg = false
 		@finflg = true
@@ -105,10 +105,6 @@ class TwitterBot
 				message = "@"+status.user.screen_name+" ぺろぺろしすぎに注意しましょうね"
 				post message
 				@autoreplyflg = true
-			elsif status.text =~ /(いたい|痛い|頭痛|腰痛|胃痛)/
-				message = "@"+status.user.screen_name+" いたいのいたいのとんでけー ＞＜"
-				post message
-				@autoreplyflg = true
 			elsif status.text =~ /(mogmog|gokgok)/
 				message = "@"+status.user.screen_name+" おいしそーです (￣￢￣)ジュル"
 				post message
@@ -118,10 +114,6 @@ class TwitterBot
 				@autoreplyflg = true
 			elsif status.text =~ /^@mirubot .*(かわい|可愛)/
 				message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
-				post message
-				@autoreplyflg = true
-			elsif status.text =~ /^@mirubot /
-				message = "@"+status.user.screen_name+" ヾ（｡＞‿＜｡ ）さみしいの？"
 				post message
 				@autoreplyflg = true
 			end
