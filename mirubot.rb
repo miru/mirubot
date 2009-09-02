@@ -13,7 +13,7 @@ class TwitterBot
 		@client = client
 		@count = 0
 		@workingmin = 30
-		@workingth = 10
+		@workingth = 20
 		@timewait = 60*5
 		@autoreplyflg = false
 		@finflg = true
@@ -41,6 +41,7 @@ class TwitterBot
 			end
 			puts "## sleep" << Time.now.strftime("%H:%M:%S") << " " << @timewait.to_s << "sec"
 			sleep(@timewait)
+			@autoreplyflg = false
 		end
 	end
 
