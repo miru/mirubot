@@ -20,16 +20,21 @@ class TwitterBot
     @workingth = 14
     @timewait = 60*5
     @idlecount = 0
-    @idleth = 6
+    @idleth = 12
     @postflg = false
+    @lastid = 0
   end
   
   def run
     while true
       getfrom = Time.now - @timewait + 3
-      timeline=@client.timeline_for(:friends, :since => getfrom) do |status|
+#      timeline=@client.timeline_for(:friends, :since => getfrom) do |status|
+      timeline=@client.timeline_for(:friends, :id => @lastid) do |status|
         if status.created_at <= getfrom
           next
+        end
+        if status.id > @lastid
+          @lastid = status.id
         end
         
         puts "<<get TL("+status.created_at.strftime("%H:%M:%S")+") "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s
@@ -52,8 +57,8 @@ class TwitterBot
         @idlecount += 1
       end
       if @idlecount >= @idleth
-        message = "私はあいどる！※生存確認的な意味で"
-        post message
+        #message = "私はあいどる！※生存確認的な意味で"
+        #post message
         @idlecount = 0
       end
 
@@ -125,6 +130,9 @@ class TwitterBot
       elsif nodefull =~ /ぺろぺろ/
         message = "@"+status.user.screen_name+" ぺろぺろしすぎに注意しましょうね"
         post message
+      elsif nodefull =~ /なでなで/
+        message = "@"+status.user.screen_name+" ヾ（｡＞‿＜｡ ）"
+        post message
       elsif nodefull =~ /(mogmog|gokgok)/
         message = "@"+status.user.screen_name+" おいしそーです (￣￢￣)ジュル"
         post message
@@ -155,9 +163,9 @@ end
 
 
 # main
-#WEBrick::Daemon.start {
+WEBrick::Daemon.start {
 	client=Twitter::Client.from_config('/home/miru/bin/mirubot-conf.yaml','bot')
 	bot=TwitterBot.new client
 
 	bot.run
-#}
+}
