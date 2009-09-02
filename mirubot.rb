@@ -32,7 +32,7 @@ class TwitterBot
           next
         end
         
-        puts "<<get TL("+status.created_at.strftime("%H:%M:%S")+") "+status.user.screen_name+": "+status.text + status.id.to_s
+        puts "<<get TL("+status.created_at.strftime("%H:%M:%S")+") "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s
         
         if status.user.screen_name != "mirubot"
           self.autoreply status
