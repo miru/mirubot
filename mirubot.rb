@@ -129,8 +129,9 @@ end
 
 
 # main
-client=Twitter::Client.from_config('/home/miru/bin/mirubot-conf.yaml','bot')
-bot=TwitterBot.new client
+WEBrick::Daemon.start {
+	client=Twitter::Client.from_config('/home/miru/bin/mirubot-conf.yaml','bot')
+	bot=TwitterBot.new client
 
-bot.run
-
+	bot.run
+}
