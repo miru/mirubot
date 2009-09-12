@@ -82,10 +82,10 @@ class TwitterBot
     end
 
     for user in friends
+      getfrom=Time.now-60*@workingmin
+      rss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
+      #sleep(1)
       begin
-        sleep(1)
-        getfrom=Time.now-60*@workingmin
-        rss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
         userrss = RSS::Parser.parse(rss)
       rescue
         puts "workingnow RSS get: " << user.screen_name << " ... fail"
@@ -175,10 +175,9 @@ class TwitterBot
     
     friends = @client.my(:friends)
     for user in friends
-      
+      #sleep(1)
+      userrss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
       begin
-        sleep(1)
-        userrss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
         rss = RSS::Parser.parse(userrss)
       rescue
         puts "marcov RSS get: " << user.screen_name << " ... fail"
@@ -187,7 +186,10 @@ class TwitterBot
         #puts "marcov RSS get: " << user.screen_name << " ... success"
       end
       rss.items.each do | item |
-        text = text + item.title.sub(/^.*: /," ")
+        a = item.title.sub(/^.*: /," ")
+        a = a.gsub(/\[.*\]/," ")
+        a = a.gsub(/\(.*\)/," ")
+        text = text + a
       end
     end
 
