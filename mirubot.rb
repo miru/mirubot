@@ -99,8 +99,7 @@ class TwitterBot
           end
         end
         if @count > @workingth
-          message = "@" << user.screen_name << " おっしっごっとしまっしょ！(▰╹◡╹▰) "
-          message = message << "(" << @workingmin.to_s << "分で" << @count.to_s << "ポスト)"
+          message = "@" << user.screen_name << @workingmin.to_s << "分で" << @count.to_s << "ポストもしてるけど、だいじょうぶ？"
           post message
         end
       end
@@ -109,7 +108,6 @@ class TwitterBot
   
   def autoreply status
     #puts "== " << status.text
-    
     if status.text =~ /^@mirubot /
       atreply status
     else
@@ -144,7 +142,7 @@ class TwitterBot
       elsif nodefull =~ /ぎゅー/
         message = "@"+status.user.screen_name+" ぎゅっとぎゅっと"
         post message
-      elsif nodefull =~ /さみしい/
+      elsif nodefull =~ /(さみし|さびし)/
         message = "@"+status.user.screen_name+" わたしはここにいるよ"
         post message
       elsif nodefull =~ /(mogmog|gokgok)/
@@ -202,11 +200,12 @@ class TwitterBot
       data.push h = {'head' => a[0], 'middle' => a[1], 'end' => a[2]}
     end
 
+    maxlen = rand(100)
     t1 = data[0]['head']
     t2 = data[0]['middle']
     new_text = t1 + t2
     while true
-      break if new_text.size > 70
+      break if new_text.size > maxlen
       _a = Array.new
       data.each do |hash|
         _a.push hash if hash['head'] == t1 && hash['middle'] == t2
