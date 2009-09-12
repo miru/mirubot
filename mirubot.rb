@@ -86,14 +86,14 @@ class TwitterBot
         sleep(1)
         getfrom=Time.now-60*@workingmin
         rss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
-        userrss.push RSS::Parser.parse(rss)
+        userrss = RSS::Parser.parse(rss)
       rescue
         puts "workingnow RSS get: " << user.screen_name << " ... fail"
         next
       else
         #puts "workingnow RSS get: " << user.screen_name << " ... success"
         @count = 0
-        rss.items.each do | item |
+        userrss.items.each do | item |
           if item.date > getfrom
             @count += 1
           end
@@ -144,6 +144,9 @@ class TwitterBot
         post message
       elsif nodefull =~ /(さみし|さびし)/
         message = "@"+status.user.screen_name+" わたしはここにいるよ"
+        post message
+      elsif nodefull =~ /クンカクンカ/
+        message = "@"+status.user.screen_name+" くんくん、すんすん"
         post message
       elsif nodefull =~ /(mogmog|gokgok)/
         message = "@"+status.user.screen_name+" おいしそーです (￣￢￣)ジュル"
