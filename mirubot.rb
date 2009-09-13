@@ -9,89 +9,106 @@ require 'kconv'
 require 'rss' 
 require 'webrick'
 require "MeCab"
+require 'logger'
 
 class TwitterBot
   def initialize client
     @client = client
     @count = 0
-    @workingmin = 30
-    @workingth = 14
-    @timewait = 60*5
+    @workingmin = 30  # min
+    @workingth = 14   # post count
+    @timewait = 60*5  # sec
+    @idleth = 5       # idle threthold
+
     @idlecount = 0
-    @idleth = 3
-    @postflg = false
     @lastid = 0
+    @replylastid = 0
+    @replyfirst = true
   end
   
   def run
+    @logfile = Logger.new("./log.txt")
+    @logfile.level = Logger::INFO
+    @logfile.info("Startup mirubot")
     while true
+      starttime = Time.now
 
-      # get timeline
-      getfrom = Time.now - @timewait + 3
-      begin
-        timeline=@client.timeline_for(:friends, :id => @lastid)
-      rescue
-        puts "Timeline get failed"
-      else
-        timeline.each do |status|
-          if status.created_at <= getfrom
+      # タイムラインチェック
+      @logfile.info("Do gettimeline")
+      self.gettimeline
+      @logfile.info("Do at replay")
+      self.atreply
+
+      @idlecount += 1
+      if @idlecount >= @idleth
+        # 仕事してください
+        time = Time.now
+        if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 18)
+          @logfile.info("Do workingnow")
+          self.workingnow
+        end
+        
+        # マルコフ連鎖ポスト
+        @logfile.info("Do marcov")
+        self.rssmarcov ""
+        @idlecount = 0
+      end
+
+      difftime = Time.now - starttime
+      if difftime < @timewait
+        t = @timewait - difftime
+        @logfile.info("## sleep " << t.to_s << "sec idle=" << @idlecount.to_s)
+        sleep(t)
+      end
+    end
+  end
+
+  # 通常タイムライン取得
+  def gettimeline
+    oldid = @lastid
+    begin
+      timeline=@client.timeline_for(:friends, :id => @lastid)
+    rescue
+      @logfile.warn("Timeline get failed")
+    else
+      timeline.each do | status |
+        if status.id > @lastid
+          @lastid = status.id
+        end
+        if status.id > oldid
+          if status.user.screen_name == "mirubot"
             next
-          end
-          if status.id > @lastid
-            @lastid = status.id
-          end
-          
-          puts "<<get TL("+status.created_at.strftime("%H:%M:%S")+") "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s
-          
-          if status.user.screen_name != "mirubot"
-            self.autoreply status
-            sleep(1)
+          else
+            @logfile.info("<<get TL("+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
+            self.mecabreply status
           end
         end
       end
-
-      # workingnow
-      time = Time.now
-      if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 18)
-        puts "Do workingnow"
-        self.workingnow
-      end
-    
-      if @postflg == true
-        @idlecount = 0
-      else
-        @idlecount += 1
-      end
-      if @idlecount >= @idleth
-        self.rssmarcov
-        @idlecount = 0
-      end
-
-      puts "## sleep " << Time.now.strftime("%H:%M:%S") << " " << @timewait.to_s << "sec idle=" << @idlecount.to_s
-      @postflg = false
-      sleep(@timewait)
     end
   end
-  
+
+  # 仕事してください
   def workingnow
+    # フレンドリスト取得
     begin
       friends = @client.my(:friends)
     rescue
-      puts "Friends get faild"
+      @logfile.warn("Friends get faild")
       return
     end
 
+    # フレンドのRSS取得
     for user in friends
       getfrom=Time.now-60*@workingmin
       rss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
-      #sleep(1)
+      sleep(1)
       begin
         userrss = RSS::Parser.parse(rss)
       rescue
-        puts "workingnow RSS get: " << user.screen_name << " ... fail"
+        @logfile.warn("workingnow RSS get: " << user.screen_name << " ... fail")
         next
       else
-        #puts "workingnow RSS get: " << user.screen_name << " ... success"
+        # ポスト数カウント
         @count = 0
         userrss.items.each do | item |
           if item.date > getfrom
@@ -99,28 +116,29 @@ class TwitterBot
           end
         end
         if @count > @workingth
-          message = "@" << user.screen_name << @workingmin.to_s << "分で" << @count.to_s << "ポストもしてるけど、だいじょうぶ？"
+          if user.screen_name == "tororosoba"
+            message = "@" << user.screen_name << @workingmin.to_s << "分で"\
+            << @count.to_s << "ポストしてます。お仕事してください。"
+          else
+            message = "@" << user.screen_name << @workingmin.to_s << "分で"\
+            << @count.to_s << "ポストしてるけどだいじょうぶ？"
+          end
           post message
         end
       end
     end
   end
-  
-  def autoreply status
-    #puts "== " << status.text
-    if status.text =~ /^@mirubot /
-      atreply status
-    else
-      mecabreply status
-    end
-  end
 
+  # めかぶかけて単語に反応
   def mecabreply status
     mecab = MeCab::Tagger.new("-Ochasen")
-    node = mecab.parseToNode(status.text)
+
+    a = self.mecabexclude status.text
+    node = mecab.parseToNode(a)
+
     while node
       nodefull = node.surface << " " << node.feature
-      #puts "== " << nodefull
+      @logfile.debug("mecab: "+nodefull)
       if nodefull =~ /^えっ /
         message = "@"+status.user.screen_name+" なにそれこわい （ﾟдﾟlll）"
         post message
@@ -155,49 +173,75 @@ class TwitterBot
       node = node.next
     end
   end
-  
-  def atreply status
-    if status.text =~ /(かわい|可愛|かあい|かーいー)/
-      message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
-      post message
-    elsif status.text =~ / ありがと/
-      message = "@"+status.user.screen_name+" どういたしましてっ ＞ω＜"
-      post message
-    elsif status.text =~ / ぴんぐ/
-      message = "@"+status.user.screen_name+" ぽんぐ"
-      post message
+
+  # ＠が飛んできたら何か返す
+  def atreply
+    oldid = @replylastid
+    begin
+      replyline = @client.timeline_for(:replies)
+    rescue
+      @logfile.warn("Mentions receive fail")
+    else
+      replyline.each do |status|
+        # 一番最初はリプライしない
+        if @replyfirst
+          @replylastid = status.id
+          return
+        end
+        if status.user.screen_name == "mirubot"
+          next
+        else
+          if status.id > oldid
+            @logfile.info("<<get RP("+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
+            if status.text =~ /(かわい|可愛|かあい|かーいー)/
+              message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
+              post message
+            elsif status.text =~ /ありがと/
+              message = "@"+status.user.screen_name+" どういたしましてっ ＞ω＜"
+              post message
+            elsif status.text =~ /ぴんぐ/
+              message = "@"+status.user.screen_name+" ぽんぐ"
+              post message
+            else
+              self.rssmarcov "@"+status.user.screen_name+" "
+            end
+          end
+        end
+      end
     end
   end
   
-  def rssmarcov
+  def rssmarcov heading
     text = String.new
     text = ""
     
     friends = @client.my(:friends)
     for user in friends
-      #sleep(1)
+      sleep(1)
       userrss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
       begin
         rss = RSS::Parser.parse(userrss)
       rescue
-        puts "marcov RSS get: " << user.screen_name << " ... fail"
+        @logfile.warn("marcov RSS get: " << user.screen_name << " ... fail")
         next
       else
-        #puts "marcov RSS get: " << user.screen_name << " ... success"
+        @logfile.debug("marcov RSS get: " << user.screen_name << " ... success")
       end
       rss.items.each do | item |
-        a = item.title.sub(/^.*: /," ")
-        a = a.gsub(/\[.*\]/," ")
-        a = a.gsub(/\(.*\)/," ")
+        #a = item.title.sub(/^.*: /," ")
+        #a = a.gsub(/\[.*\]/," ")
+        #a = a.gsub(/\(.*\)/," ")
+        a = self.mecabexclude item.title
         text = text + a
       end
     end
 
-    if text == ""
+    if text.size == 0
       return
     end
-    text = text.gsub(/@[A-Za-z0-9]+/,"")
-    text = text.gsub(/(https?|ftp)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)/,"")
+    #text = text.gsub(/@[A-Za-z0-9]+/,"")
+    #text = text.gsub(/,/,"")
+    #text = text.gsub(/(https?|ftp)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)/,"")
 
     mecab = MeCab::Tagger.new("-Owakati")
     data = Array.new
@@ -205,10 +249,11 @@ class TwitterBot
       data.push h = {'head' => a[0], 'middle' => a[1], 'end' => a[2]}
     end
 
-    maxlen = rand(100)
+    maxlen = rand(60) + 40
     t1 = data[0]['head']
     t2 = data[0]['middle']
-    new_text = t1 + t2
+    new_text = heading + t1 + t2
+
     while true
       break if new_text.size > maxlen
       _a = Array.new
@@ -222,23 +267,37 @@ class TwitterBot
       t1 = _a[num]['middle']
       t2 = _a[num]['end']
     end
-    puts new_text.gsub(/EOS$/,'')
+    @logfile.info(new_text.gsub(/EOS$/,''))
     post new_text.gsub(/EOS$/,'')
   end
 
+  def mecabexclude str
+    a = str.sub(/^.*: /," ")
+    a = a.gsub(/\[.*\]/," ")
+    a = a.gsub(/\(.*\)/," ")
+    a = a.gsub(/@[A-Za-z0-9_]+/,"")
+    a = a.gsub(/,/,"")
+    a = a.gsub(/(https?|ftp)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)/,"")
+    return a
+  end
+
   def post message
-    @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
-    @postflg = true
-    puts ">>send message: "+message
+    begin
+      @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
+    rescue
+      @logfile.warn("POST fail")
+    else
+      @logfile.debug(">>send message: "+message)
+      #@idlecount = 0
+    end
   end
 
 end
 
 
 # main
-WEBrick::Daemon.start {
+#WEBrick::Daemon.start {
 	client=Twitter::Client.from_config('/home/miru/bin/mirubot-conf.yaml','bot')
 	bot=TwitterBot.new client
-
 	bot.run
-}
+#}
