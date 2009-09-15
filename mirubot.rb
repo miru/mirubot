@@ -66,21 +66,26 @@ class TwitterBot
   # 通常タイムライン取得
   def gettimeline
     oldid = @lastid
-    begin
-      timeline=@client.timeline_for(:friends, :id => @lastid)
-    rescue
-      @logfile.warn("Timeline get failed")
-    else
-      timeline.each do | status |
-        if status.id > @lastid
-          @lastid = status.id
-        end
-        if status.id > oldid
-          if status.user.screen_name == "mirubot"
-            next
-          else
-            @logfile.info("<<get TL "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
-            self.mecabreply status
+    failflg = true
+    while failflg
+      begin
+        timeline=@client.timeline_for(:friends, :id => @lastid)
+      rescue
+        @logfile.warn("Timeline get failed")
+        sleep(10)
+      else
+        failflg = false
+        timeline.each do | status |
+          if status.id > @lastid
+            @lastid = status.id
+          end
+          if status.id > oldid
+            if status.user.screen_name == "mirubot"
+              next
+            else
+              @logfile.info("<<get TL "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
+              self.mecabreply status
+            end
           end
         end
       end
@@ -90,18 +95,22 @@ class TwitterBot
   # 仕事してください
   def workingnow
     # フレンドリスト取得
-    begin
-      friends = @client.my(:friends)
-    rescue
-      @logfile.warn("Friends get faild")
-      return
+    failflg = true
+    while failflg
+      begin
+        friends = @client.my(:friends)
+      rescue
+        @logfile.warn("Friends get faild")
+        sleep(10)
+      else
+        failflg = false
+      end
     end
 
     # フレンドのRSS取得
     for user in friends
       getfrom=Time.now-60*@workingmin
       rss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
-      sleep(1)
       begin
         userrss = RSS::Parser.parse(rss)
       rescue
@@ -176,36 +185,41 @@ class TwitterBot
 
   # ＠が飛んできたら何か返す
   def atreply
-    begin
-      replyline = @client.timeline_for(:replies)
-    rescue
-      @logfile.warn("Mentions receive fail")
-    else
-      replyline.each do |status|
-        # 一番最初はリプライしない
-        if @replyfirst
-          @replylastid = status.id
-          @replyfirst = false
-          return
-        end
-        case status.user.screen_name
-        when "mirubot", "ha_ma" "wakatter" "ichiyonnana_bot"
-          next
-        else
-          if status.id > @replylastid
+    failflg = false
+    while failflg
+      begin
+        replyline = @client.timeline_for(:replies)
+      rescue
+        @logfile.warn("Mentions receive fail")
+        sleep(10)
+      else
+        failflg = false
+        replyline.each do |status|
+          # 一番最初はリプライしない
+          if @replyfirst
             @replylastid = status.id
-            @logfile.info("<<get RP "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
-            if status.text =~ /(かわい|可愛|かあい|かーいー)/
-              message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
-              post message
-            elsif status.text =~ /ありがと/
-              message = "@"+status.user.screen_name+" どういたしましてっ ＞ω＜"
-              post message
-            elsif status.text =~ /ぴんぐ/
-              message = "@"+status.user.screen_name+" ぽんぐ"
-              post message
-            else
-              self.rssmarcov "@"+status.user.screen_name+" "
+            @replyfirst = false
+            return
+          end
+          case status.user.screen_name
+          when "mirubot", "ha_ma" "wakatter" "ichiyonnana_bot"
+            next
+          else
+            if status.id > @replylastid
+              @replylastid = status.id
+              @logfile.info("<<get RP "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
+              if status.text =~ /(かわい|可愛|かあい|かーいー)/
+                message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
+                post message
+              elsif status.text =~ /ありがと/
+                message = "@"+status.user.screen_name+" どういたしましてっ ＞ω＜"
+                post message
+              elsif status.text =~ /ぴんぐ/
+                message = "@"+status.user.screen_name+" ぽんぐ"
+                post message
+              else
+                self.rssmarcov "@"+status.user.screen_name+" "
+              end
             end
           end
         end
@@ -219,7 +233,6 @@ class TwitterBot
     
     friends = @client.my(:friends)
     for user in friends
-      sleep(1)
       userrss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
       begin
         rss = RSS::Parser.parse(userrss)
@@ -264,7 +277,6 @@ class TwitterBot
       t1 = _a[num]['middle']
       t2 = _a[num]['end']
     end
-    @logfile.info(new_text.gsub(/EOS$/,''))
     post new_text.gsub(/EOS$/,'')
   end
 
@@ -288,7 +300,7 @@ class TwitterBot
         @logfile.warn(">>send fail: "+message)
         sleep(1)
       else
-        @logfile.debug(">>send message: "+message)
+        @logfile.info(">>send message: "+message)
         failflg = false
       end
     end

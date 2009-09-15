@@ -32,22 +32,9 @@ class TwitterBot
     text = String.new
     text = ""
     
-#    userrss = 'http://favotter.matope.com/rss.php?mode=new'
-#    begin
-#      rss = RSS::Parser.parse(userrss)
-#    rescue
-#      @logfile.warn("marcov RSS get: ... fail")
-#      next
-#    else
-#      @logfile.debug("marcov RSS get: ... success")
-#    end
-
-
-    
     nokogiri = Nokogiri::HTML.parse(open('http://favotter.matope.com/'))
     descs = nokogiri.xpath('//span[@class=" status_text description"]//text()') 
     descs.each do | desc |
-      #puts Kconv.kconv(desc,Kconv::UTF8)
       text = text+" "+Kconv.kconv(desc,Kconv::UTF8)
     end
 
@@ -96,19 +83,18 @@ class TwitterBot
   end
 
   def post message
-#    failflg = true
-#    while failflg
-#      begin
-#        @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
-#      rescue
-#        @logfile.warn(">>send fail: "+message)
-#        sleep(1)
-#      else
-#        @logfile.debug(">>send message: "+message)
-#        failflg = false
-#      end
-#    end
-    puts message
+    failflg = true
+    while failflg
+      begin
+        @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
+      rescue
+        @logfile.warn(">>send fail: "+message)
+        sleep(1)
+      else
+        @logfile.debug(">>send message: "+message)
+        failflg = false
+      end
+    end
   end
 
 end
