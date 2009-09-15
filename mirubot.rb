@@ -18,7 +18,7 @@ class TwitterBot
     @workingmin = 30  # min
     @workingth = 14   # post count
     @timewait = 60*5  # sec
-    @idleth = 5       # idle threthold
+    @idleth = 6       # idle threthold
 
     @idlecount = 0
     @lastid = 0
@@ -36,7 +36,7 @@ class TwitterBot
       # タイムラインチェック
       @logfile.info("Do gettimeline")
       self.gettimeline
-      @logfile.info("Do at replay")
+      @logfile.info("Do at reply")
       self.atreply
 
       @idlecount += 1
@@ -79,7 +79,7 @@ class TwitterBot
           if status.user.screen_name == "mirubot"
             next
           else
-            @logfile.info("<<get TL("+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
+            @logfile.info("<<get TL "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
             self.mecabreply status
           end
         end
@@ -117,10 +117,10 @@ class TwitterBot
         end
         if @count > @workingth
           if user.screen_name == "tororosoba"
-            message = "@" << user.screen_name << @workingmin.to_s << "分で"\
+            message = "@" << user.screen_name << " あのー " << @workingmin.to_s << "分で"\
             << @count.to_s << "ポストしてます。お仕事してください。"
           else
-            message = "@" << user.screen_name << @workingmin.to_s << "分で"\
+            message = "@" << user.screen_name << " " << @workingmin.to_s << "分で"\
             << @count.to_s << "ポストしてるけどだいじょうぶ？"
           end
           post message
@@ -139,8 +139,8 @@ class TwitterBot
     while node
       nodefull = node.surface << " " << node.feature
       @logfile.debug("mecab: "+nodefull)
-      if nodefull =~ /^えっ /
-        message = "@"+status.user.screen_name+" なにそれこわい （ﾟдﾟlll）"
+      if nodefull =~ /ふろ/
+        message = "@"+status.user.screen_name+" ほくほく @"+status.user.screen_name+" さん"
         post message
       elsif nodefull =~ /にゃん /
         message = "@"+status.user.screen_name+" にゃかにゃかにゃんФωФ"
@@ -155,7 +155,7 @@ class TwitterBot
         message = "@"+status.user.screen_name+" ぺろぺろしすぎに注意しましょうね"
         post message
       elsif nodefull =~ /なでなで/
-        message = "@"+status.user.screen_name+" ヾ（｡＞‿＜｡ ）よしよし"
+        message = "@"+status.user.screen_name+" ヾ（＞‿＜｡ ）よしよし"
         post message
       elsif nodefull =~ /ぎゅー/
         message = "@"+status.user.screen_name+" ぎゅっとぎゅっと"
@@ -176,7 +176,6 @@ class TwitterBot
 
   # ＠が飛んできたら何か返す
   def atreply
-    oldid = @replylastid
     begin
       replyline = @client.timeline_for(:replies)
     rescue
@@ -186,13 +185,16 @@ class TwitterBot
         # 一番最初はリプライしない
         if @replyfirst
           @replylastid = status.id
+          @replyfirst = false
           return
         end
-        if status.user.screen_name == "mirubot"
+        case status.user.screen_name
+        when "mirubot", "ha_ma" "wakatter" "ichiyonnana_bot"
           next
         else
-          if status.id > oldid
-            @logfile.info("<<get RP("+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
+          if status.id > @replylastid
+            @replylastid = status.id
+            @logfile.info("<<get RP "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
             if status.text =~ /(かわい|可愛|かあい|かーいー)/
               message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
               post message
@@ -228,9 +230,6 @@ class TwitterBot
         @logfile.debug("marcov RSS get: " << user.screen_name << " ... success")
       end
       rss.items.each do | item |
-        #a = item.title.sub(/^.*: /," ")
-        #a = a.gsub(/\[.*\]/," ")
-        #a = a.gsub(/\(.*\)/," ")
         a = self.mecabexclude item.title
         text = text + a
       end
@@ -239,9 +238,6 @@ class TwitterBot
     if text.size == 0
       return
     end
-    #text = text.gsub(/@[A-Za-z0-9]+/,"")
-    #text = text.gsub(/,/,"")
-    #text = text.gsub(/(https?|ftp)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)/,"")
 
     mecab = MeCab::Tagger.new("-Owakati")
     data = Array.new
@@ -250,8 +246,9 @@ class TwitterBot
     end
 
     maxlen = rand(60) + 40
-    t1 = data[0]['head']
-    t2 = data[0]['middle']
+    d = rand(data.size)
+    t1 = data[d]['head']
+    t2 = data[d]['middle']
     new_text = heading + t1 + t2
 
     while true
@@ -275,6 +272,7 @@ class TwitterBot
     a = str.sub(/^.*: /," ")
     a = a.gsub(/\[.*\]/," ")
     a = a.gsub(/\(.*\)/," ")
+    a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/,"")
     a = a.gsub(/,/,"")
     a = a.gsub(/(https?|ftp)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)/,"")
@@ -282,13 +280,17 @@ class TwitterBot
   end
 
   def post message
-    begin
-      @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
-    rescue
-      @logfile.warn("POST fail")
-    else
-      @logfile.debug(">>send message: "+message)
-      #@idlecount = 0
+    failflg = true
+    while failflg
+      begin
+        @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
+      rescue
+        @logfile.warn(">>send fail: "+message)
+        sleep(1)
+      else
+        @logfile.debug(">>send message: "+message)
+        failflg = false
+      end
     end
   end
 
