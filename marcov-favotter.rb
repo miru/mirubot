@@ -50,8 +50,8 @@ class TwitterBot
 
     maxlen = rand(50) + 50
     d = rand(data.size)
-    t1 = data[0]['head']
-    t2 = data[0]['middle']
+    t1 = data[d]['head']
+    t2 = data[d]['middle']
     new_text = heading + t1 + t2
 
     while true

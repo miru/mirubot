@@ -16,14 +16,16 @@ class TwitterBot
     @client = client
     @count = 0
     @workingmin = 30  # min
-    @workingth = 14   # post count
-    @timewait = 60*5  # sec
-    @idleth = 6       # idle threthold
+    @workingth = 16   # post count
+    @timewait = 60*3  # sec
+    @idleth = 10      # idle threthold
 
     @idlecount = 0
     @lastid = 0
     @replylastid = 0
     @replyfirst = true
+    @doworkingnowflg = true
+    @domarcovflg = true
   end
   
   def run
@@ -41,17 +43,22 @@ class TwitterBot
 
       @idlecount += 1
       if @idlecount >= @idleth
+
         # 仕事してください
-        time = Time.now
-        if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 18)
-          @logfile.info("Do workingnow")
-          self.workingnow
+        if @doworkingnowflg
+          time = Time.now
+          if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 18)
+            @logfile.info("Do workingnow")
+            self.workingnow
+          end
         end
         
         # マルコフ連鎖ポスト
-        @logfile.info("Do marcov")
-        self.rssmarcov ""
-        @idlecount = 0
+        if @domarcovflg
+          @logfile.info("Do marcov")
+          self.rssmarcov ""
+          @idlecount = 0
+        end
       end
 
       difftime = Time.now - starttime
@@ -72,7 +79,7 @@ class TwitterBot
         timeline=@client.timeline_for(:friends, :id => @lastid)
       rescue
         @logfile.warn("Timeline get failed")
-        sleep(10)
+        sleep(30)
       else
         failflg = false
         timeline.each do | status |
@@ -84,6 +91,7 @@ class TwitterBot
               next
             else
               @logfile.info("<<get TL "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
+              self.fav status
               self.mecabreply status
             end
           end
@@ -101,7 +109,7 @@ class TwitterBot
         friends = @client.my(:friends)
       rescue
         @logfile.warn("Friends get faild")
-        sleep(10)
+        sleep(30)
       else
         failflg = false
       end
@@ -135,6 +143,23 @@ class TwitterBot
           post message
         end
       end
+    end
+  end
+
+  # ふぁぼるよー
+  def fav status
+    if status.text =~ /(みるぼっと|mirubot)/
+      @client.favorite(:add, status)
+    elsif status.text =~ /暴走/
+      @client.favorite(:add, status)
+    elsif status.text =~ /(ボット|ぼっと)/
+      @client.favorite(:add, status)
+    elsif status.text =~ /(みるたん|みるぽん)/
+      @client.favorite(:add, status)
+    elsif status.text =~ /なでなで/
+      @client.favorite(:add, status)
+    elsif status.text =~ /ありがと/
+      @client.favorite(:add, status)
     end
   end
 
@@ -185,13 +210,13 @@ class TwitterBot
 
   # ＠が飛んできたら何か返す
   def atreply
-    failflg = false
+    failflg = true
     while failflg
       begin
         replyline = @client.timeline_for(:replies)
       rescue
         @logfile.warn("Mentions receive fail")
-        sleep(10)
+        sleep(30)
       else
         failflg = false
         replyline.each do |status|
@@ -217,8 +242,51 @@ class TwitterBot
               elsif status.text =~ /ぴんぐ/
                 message = "@"+status.user.screen_name+" ぽんぐ"
                 post message
+              elsif status.text =~ /(状態|じょうたい)/
+                if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
+                  @domarcovflg = true
+                  message = "@"+status.user.screen_name+" マルコフ連鎖:"
+                  if @domarcovflg
+                    message = message+"ON"
+                  else
+                    message = message+"OFF"
+                  end
+                  message = message+" ポスト数カウント: "
+                  if @doworkingnowflg
+                    message = message+"ON"
+                  else
+                    message = message+"OFF"
+                  end
+                  post message
+                end
+              elsif status.text =~ /(マルコフ|まるこふ)(開始|かいし)/
+                if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
+                  @domarcovflg = true
+                  message = "@"+status.user.screen_name+" マルコフ連鎖機能開始します。"
+                  post message
+                end
+              elsif status.text =~ /(マルコフ|まるこふ)(停止|ていし)/
+                if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
+                  @domarcovflg = false
+                  message ="@"+status.user.screen_name+" マルコフ連鎖機能停止します。"
+                  post message
+                end
+              elsif status.text =~ /(カウント|かうんと)(開始|かいし)/
+                if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
+                  @doworkingnowflg = true
+                  message ="@"+status.user.screen_name+" カウント機能開始します。"
+                  post message
+                end
+              elsif status.text =~ /(カウント|カウント)(停止|ていし)/
+                if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
+                  @doworkingnowflg = false
+                  message = "@"+status.user.screen_name+" カウント機能停止します。"
+                  post message
+                end
               else
-                self.rssmarcov "@"+status.user.screen_name+" "
+                if @domarcovflg
+                  self.rssmarcov "@"+status.user.screen_name+" "
+                end
               end
             end
           end
@@ -286,8 +354,9 @@ class TwitterBot
     a = a.gsub(/\(.*\)/," ")
     a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/,"")
+    a = a.gsub(/[A-Za-z0-9_]+/,"")
     a = a.gsub(/,/,"")
-    a = a.gsub(/(https?|ftp)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)/,"")
+    a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
     return a
   end
 
@@ -298,7 +367,7 @@ class TwitterBot
         @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
       rescue
         @logfile.warn(">>send fail: "+message)
-        sleep(1)
+        sleep(10)
       else
         @logfile.info(">>send message: "+message)
         failflg = false
