@@ -94,7 +94,7 @@ class TwitterBot
               next
             else
               @logfile.info("<<get TL "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
-              self.fav status
+              #self.fav status
               self.mecabreply status
             end
           end
@@ -371,6 +371,7 @@ class TwitterBot
   def mecabexclude str
     a = str.sub(/^.*: /," ")
     a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
+    a = a.gsub(/＞[⌒＞＜←→]/," ")
     a = a.gsub(/【.*】/," ")
     a = a.gsub(/（.*）/," ")
     a = a.gsub(/[「」]/," ")
@@ -379,7 +380,7 @@ class TwitterBot
     a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/,"")
     a = a.gsub(/[A-Za-z0-9]/,"")
-    a = a.gsub(/:,\/_/,"")
+    a = a.gsub(/:,\/_\*/,"")
     return a
   end
 
