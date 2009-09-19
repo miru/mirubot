@@ -371,7 +371,7 @@ class TwitterBot
   def mecabexclude str
     a = str.sub(/^.*: /," ")
     a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
-    a = a.gsub(/＞[⌒＞＜←→]/," ")
+    a = a.gsub(/＞＜[⌒＞＜←→]/," ")
     a = a.gsub(/【.*】/," ")
     a = a.gsub(/（.*）/," ")
     a = a.gsub(/[「」]/," ")
