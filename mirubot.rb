@@ -56,7 +56,10 @@ class TwitterBot
         # マルコフ連鎖ポスト
         if @domarcovflg
           @logfile.info("Do marcov")
-          self.rssmarcov ""
+          flg = false
+          while flg == false
+            flg = self.rssmarcov ""
+          end
           @idlecount = 0
         end
       end
@@ -118,7 +121,7 @@ class TwitterBot
     # フレンドのRSS取得
     for user in friends
       getfrom=Time.now-60*@workingmin
-      rss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
+      rss = 'http://twitter.com/status/user_timeline/' << user.id.to_s << '.rss'
       begin
         userrss = RSS::Parser.parse(rss)
       rescue
@@ -148,19 +151,25 @@ class TwitterBot
 
   # ふぁぼるよー
   def fav status
-    if status.text =~ /(みるぼっと|mirubot)/
-      @client.favorite(:add, status)
-    elsif status.text =~ /暴走/
-      @client.favorite(:add, status)
-    elsif status.text =~ /(ボット|ぼっと)/
-      @client.favorite(:add, status)
-    elsif status.text =~ /(みるたん|みるぽん)/
-      @client.favorite(:add, status)
-    elsif status.text =~ /なでなで/
-      @client.favorite(:add, status)
-    elsif status.text =~ /ありがと/
-      @client.favorite(:add, status)
-    end
+    begin
+      if status.text =~ /(みるぼっと)/
+        @client.favorite(:add, status)
+      elsif status.text =~ /(ねこ|ネコ|にゃー|ニャー)/
+        @client.favorite(:add, status)
+      elsif status.text =~ /＞ω＜/
+        @client.favorite(:add, status)
+      elsif status.text =~ /暴走/
+        @client.favorite(:add, status)
+      elsif status.text =~ /(みるたん|みるぽん|みるさん)/
+        @client.favorite(:add, status)
+      elsif status.text =~ /なでなで/
+        @client.favorite(:add, status)
+      elsif status.text =~ /ありがと/
+        @client.favorite(:add, status)
+      end
+    rescue
+        @logfile.warn("Add favorite error")
+    end      
   end
 
   # めかぶかけて単語に反応
@@ -173,14 +182,14 @@ class TwitterBot
     while node
       nodefull = node.surface << " " << node.feature
       @logfile.debug("mecab: "+nodefull)
-      if nodefull =~ /ふろ/
+      if nodefull =~ /(ふろ|風呂|フロ)/
         message = "@"+status.user.screen_name+" ほくほく @"+status.user.screen_name+" さん"
-        post message
-      elsif nodefull =~ /にゃん /
-        message = "@"+status.user.screen_name+" にゃかにゃかにゃんФωФ"
         post message
       elsif nodefull =~ /(ベッド|フトン)/
         message = "@"+status.user.screen_name+" おふとんもふもふー＞ω＜！"
+        post message
+      elsif nodefull =~ /(はーい)/
+        message = "@"+status.user.screen_name+" ヾ（｡＞‿＜｡ ）いいこいいこ"
         post message
       elsif nodefull =~ /もふもふ/
         message = "@"+status.user.screen_name+" もっふもふにしてやんよーっ！ ＞ω＜"
@@ -201,8 +210,13 @@ class TwitterBot
         message = "@"+status.user.screen_name+" くんくん、すんすん"
         post message
       elsif nodefull =~ /(mogmog|gokgok)/
-        message = "@"+status.user.screen_name+" おいしそーです (￣￢￣)ジュル"
+        message = "@"+status.user.screen_name+" おいしそーですしおすし (￣￢￣)ジュル"
         post message
+      elsif nodefull =~ /(酒|酔|呑)/
+        if status.user.screen_name == "kunio_"
+          message = "@"+status.user.screen_name+" 肝硬変"
+          post message
+        end
       end
       node = node.next
     end
@@ -227,7 +241,7 @@ class TwitterBot
             return
           end
           case status.user.screen_name
-          when "mirubot", "ha_ma" "wakatter" "ichiyonnana_bot"
+          when "mirubot", "ha_ma" "wakatter" "ichiyonnana_bot" "ha_ru_ka"
             next
           else
             if status.id > @replylastid
@@ -285,7 +299,10 @@ class TwitterBot
                 end
               else
                 if @domarcovflg
-                  self.rssmarcov "@"+status.user.screen_name+" "
+                  flg = false
+                  while flg == false
+                    flg = self.rssmarcov "@"+status.user.screen_name+" "
+                  end
                 end
               end
             end
@@ -308,7 +325,7 @@ class TwitterBot
         @logfile.warn("marcov RSS get: " << user.screen_name << " ... fail")
         next
       else
-        @logfile.debug("marcov RSS get: " << user.screen_name << " ... success")
+        @logfile.info("marcov RSS get: " << user.screen_name << " ... success")
       end
       rss.items.each do | item |
         a = self.mecabexclude item.title
@@ -317,7 +334,9 @@ class TwitterBot
     end
 
     if text.size == 0
-      return
+      @logfile.warn("marcov RSS get: all fail")
+      sleep(10)
+      return false
     end
 
     mecab = MeCab::Tagger.new("-Owakati")
@@ -346,17 +365,21 @@ class TwitterBot
       t2 = _a[num]['end']
     end
     post new_text.gsub(/EOS$/,'')
+    return true
   end
 
   def mecabexclude str
     a = str.sub(/^.*: /," ")
+    a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
+    a = a.gsub(/【.*】/," ")
+    a = a.gsub(/（.*）/," ")
+    a = a.gsub(/[「」]/," ")
     a = a.gsub(/\[.*\]/," ")
     a = a.gsub(/\(.*\)/," ")
     a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/,"")
-    a = a.gsub(/[A-Za-z0-9_]+/,"")
-    a = a.gsub(/,/,"")
-    a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
+    a = a.gsub(/[A-Za-z0-9]/,"")
+    a = a.gsub(/:,\/_/,"")
     return a
   end
 

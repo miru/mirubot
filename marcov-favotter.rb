@@ -35,7 +35,8 @@ class TwitterBot
     nokogiri = Nokogiri::HTML.parse(open('http://favotter.matope.com/'))
     descs = nokogiri.xpath('//span[@class=" status_text description"]//text()') 
     descs.each do | desc |
-      text = text+" "+Kconv.kconv(desc,Kconv::UTF8)
+      a = self.mecabexclude Kconv.kconv(desc,Kconv::UTF8)
+      text = text+" "+ a
     end
 
     if text.size == 0
@@ -73,12 +74,15 @@ class TwitterBot
 
   def mecabexclude str
     a = str.sub(/^.*: /," ")
+    a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
+    a = a.gsub(/【.*】/," ")
+    a = a.gsub(/（.*）/," ")
     a = a.gsub(/\[.*\]/," ")
     a = a.gsub(/\(.*\)/," ")
     a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/,"")
-    a = a.gsub(/,/,"")
-    a = a.gsub(/(https?|ftp)(:\/\/[-_.!~*\'()a-zA-Z0-9;\/?:\@&=+\$,%#]+)/,"")
+    a = a.gsub(/[A-Za-z0-9]/,"")
+    a = a.gsub(/:,\/_/,"")
     return a
   end
 
