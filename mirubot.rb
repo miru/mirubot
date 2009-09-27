@@ -90,7 +90,11 @@ class TwitterBot
             @lastid = status.id
           end
           if status.id > oldid
-            if status.user.screen_name == "mirubot"
+            if status.user.screen_name == "mirubot" 
+              next
+            elsif status.user.screen_name == "ha_ru_ka"
+              next
+            elsif status.user.screen_name == "ichiyonnana_bot"
               next
             else
               @logfile.info("<<get TL "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
@@ -120,6 +124,12 @@ class TwitterBot
 
     # フレンドのRSS取得
     for user in friends
+      if uesr.screen_name == "ha_ru_ka"
+        next
+      elsif user.screen_name == "ichiyonnana_bot"
+        next
+      end
+
       getfrom=Time.now-60*@workingmin
       rss = 'http://twitter.com/status/user_timeline/' << user.id.to_s << '.rss'
       begin
@@ -176,6 +186,18 @@ class TwitterBot
   def mecabreply status
     mecab = MeCab::Tagger.new("-Ochasen")
 
+    if status.user.screen_name == "mirubot"
+      return
+    elsif status.user.screen_name == "ha_ma"
+      return
+    elsif status.user.screen_name == "wakatter"
+      return
+    elsif status.user.screen_name == "ichiyonnana_bot"
+      return
+    elsif status.user.screen_name == "ha_ru_ka"
+      return
+    end
+
     a = self.mecabexclude status.text
     node = mecab.parseToNode(a)
 
@@ -183,28 +205,31 @@ class TwitterBot
       nodefull = node.surface << " " << node.feature
       @logfile.debug("mecab: "+nodefull)
       if nodefull =~ /(ふろ|風呂|フロ)/
-        message = "@"+status.user.screen_name+" ほくほく @"+status.user.screen_name+" さん"
+        message = "@"+status.user.screen_name+" さんがほっくほくー｡＞ω＜｡"
         post message
       elsif nodefull =~ /(ベッド|フトン)/
         message = "@"+status.user.screen_name+" おふとんもふもふー＞ω＜！"
         post message
       elsif nodefull =~ /(はーい)/
-        message = "@"+status.user.screen_name+" ヾ（｡＞‿＜｡ ）いいこいいこ"
+        message = "@"+status.user.screen_name+" ヾ（｡＞ω＜｡ ）いいこいいこ"
         post message
       elsif nodefull =~ /もふもふ/
         message = "@"+status.user.screen_name+" もっふもふにしてやんよーっ！ ＞ω＜"
         post message
       elsif nodefull =~ /ぺろぺろ/
-        message = "@"+status.user.screen_name+" ぺろぺろしすぎに注意しましょうね"
+        message = "@"+status.user.screen_name+" ぺろっぺろん？"
+        post message
+      elsif nodefull =~ /ちゅっちゅ/
+        message = "@"+status.user.screen_name+" さんがちゅっちゅ （＞ε＜）"
         post message
       elsif nodefull =~ /なでなで/
-        message = "@"+status.user.screen_name+" ヾ（＞‿＜｡ ）よしよし"
+        message = "@"+status.user.screen_name+" ヾ（＞ω＜｡ ）よしよし"
         post message
       elsif nodefull =~ /ぎゅー/
         message = "@"+status.user.screen_name+" ぎゅっとぎゅっと"
         post message
       elsif nodefull =~ /(さみし|さびし)/
-        message = "@"+status.user.screen_name+" わたしはここにいるよ"
+        message = "@"+status.user.screen_name+" だいじょうぶ。わたしはここにいるよ"
         post message
       elsif nodefull =~ /クンカクンカ/
         message = "@"+status.user.screen_name+" くんくん、すんすん"
@@ -214,7 +239,7 @@ class TwitterBot
         post message
       elsif nodefull =~ /(酒|酔|呑)/
         if status.user.screen_name == "kunio_"
-          message = "@"+status.user.screen_name+" 肝硬変"
+          message = "@"+status.user.screen_name+" ほどほどにね"
           post message
         end
       end
@@ -240,8 +265,15 @@ class TwitterBot
             @replyfirst = false
             return
           end
-          case status.user.screen_name
-          when "mirubot", "ha_ma" "wakatter" "ichiyonnana_bot" "ha_ru_ka"
+          if status.user.screen_name == "mirubot"
+            next
+          elsif status.user.screen_name == "ha_ma"
+            next
+          elsif status.user.screen_name == "wakatter"
+            next
+          elsif status.user.screen_name == "ichiyonnana_bot"
+            next
+          elsif status.user.screen_name == "ha_ru_ka"
             next
           else
             if status.id > @replylastid
