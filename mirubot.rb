@@ -347,8 +347,12 @@ class TwitterBot
   def rssmarcov heading
     text = String.new
     text = ""
-    
-    friends = @client.my(:friends)
+    begin
+      friends = @client.my(:friends)
+    rescue
+      return
+    end
+
     for user in friends
       userrss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
       begin
