@@ -10,6 +10,7 @@ require 'rss'
 require 'webrick'
 require "MeCab"
 require 'logger'
+require 'sqlite3'
 
 class TwitterBot
   def initialize client
@@ -58,7 +59,8 @@ class TwitterBot
           @logfile.info("Do marcov")
           flg = false
           while flg == false
-            flg = self.rssmarcov ""
+            #flg = self.rssmarcov ""
+            flg = self.dbmarcov ""
           end
           @idlecount = 0
         end
@@ -205,16 +207,16 @@ class TwitterBot
       nodefull = node.surface << " " << node.feature
       @logfile.debug("mecab: "+nodefull)
       if nodefull =~  /(はーい)/
-        message = "@"+status.user.screen_name+" ヾ（｡＞ω＜｡ ）いいこいいこ"
+        message = "@"+status.user.screen_name+" ヾ（＞ω＜｡ ）いいこいいこ"
         post message
       elsif nodefull =~ /もふもふ/
-        message = "@"+status.user.screen_name+" もっふもふにしてやんよーっ！ ＞ω＜"
+        message = "@"+status.user.screen_name+" もっふもふにしてやんよーっ！＞ω＜"
         post message
       elsif nodefull =~ /ちゅっちゅ/
         message = "@"+status.user.screen_name+" さんがちゅっちゅ （＞ε＜）"
         post message
       elsif nodefull =~ /なでなで/
-        message = "@"+status.user.screen_name+" ヾ（＞ω＜｡ ）よしよし"
+        message = "@"+status.user.screen_name+" ヾ（＞ω＜  ）よしよし"
         post message
       elsif nodefull =~ /ぎゅー/
         message = "@"+status.user.screen_name+" ぎゅっとぎゅっと"
@@ -310,7 +312,8 @@ class TwitterBot
                 if @domarcovflg
                   flg = false
                   while flg == false
-                    flg = self.rssmarcov "@"+status.user.screen_name+" "
+                    #flg = self.rssmarcov "@"+status.user.screen_name+" "
+                    flg = self.dbmarcov "@"+status.user.screen_name+" "
                   end
                 end
               end
@@ -381,19 +384,68 @@ class TwitterBot
     return true
   end
 
+  def dbmarcov heading
+    text = String.new
+    text = ""
+
+    db=SQLite3::Database.new('mirupost.sqlite3')
+    db.type_translation = true
+
+    sql = "select status_text from posts;"
+    result = db.execute(sql)
+    result.each do | post |
+      text = text << " " << post[0]
+    end
+
+    if text.size == 0
+      p "marcov DB timeline get: all fail"
+      return false
+    end
+
+    text = self.mecabexclude text
+
+    mecab = MeCab::Tagger.new("-Owakati")
+    data = Array.new
+    mecab.parse(text + "EOS").split(" ").each_cons(3) do |a|
+      data.push h = {'head' => a[0], 'middle' => a[1], 'end' => a[2]}
+    end
+
+    maxlen = rand(60) + 40
+    d = rand(data.size)
+    t1 = data[d]['head']
+    t2 = data[d]['middle']
+    new_text = heading + t1 + t2
+
+    while true
+      break if new_text.size > maxlen
+      _a = Array.new
+      data.each do |hash|
+        _a.push hash if hash['head'] == t1 && hash['middle'] == t2
+      end
+      break if _a.size == 0
+      num = rand(_a.size)
+      new_text = new_text + _a[num]['end']
+      break if _a[num]['end'] == "EOS"
+      t1 = _a[num]['middle']
+      t2 = _a[num]['end']
+    end
+    post new_text.gsub(/EOS$/,'')
+    return true
+  end
+
   def mecabexclude str
     a = str.sub(/^.*: /," ")
     a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
-    a = a.gsub(/＞＜[⌒＞＜←→]/," ")
+    a = a.gsub(/[＞＜⌒＞＜←→]/," ")
     a = a.gsub(/【.*】/," ")
     a = a.gsub(/（.*）/," ")
     a = a.gsub(/[「」]/," ")
     a = a.gsub(/\[.*\]/," ")
     a = a.gsub(/\(.*\)/," ")
     a = a.gsub(/\n/," ")
-    a = a.gsub(/@[A-Za-z0-9_]+/,"")
-    a = a.gsub(/[A-Za-z0-9]/,"")
-    a = a.gsub(/:,\/_\*/,"")
+    a = a.gsub(/@[A-Za-z0-9_]+/," ")
+    #a = a.gsub(/[A-Za-z]+/," ")
+    a = a.gsub(/[:\.,\/_\*\"]+/,"")
     return a
   end
 
