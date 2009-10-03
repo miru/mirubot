@@ -204,20 +204,11 @@ class TwitterBot
     while node
       nodefull = node.surface << " " << node.feature
       @logfile.debug("mecab: "+nodefull)
-      if nodefull =~ /(ふろ|風呂|フロ)/
-        message = "@"+status.user.screen_name+" さんがほっくほくー｡＞ω＜｡"
-        post message
-      elsif nodefull =~ /(ベッド|フトン)/
-        message = "@"+status.user.screen_name+" おふとんもふもふー＞ω＜！"
-        post message
-      elsif nodefull =~ /(はーい)/
+      if nodefull =~  /(はーい)/
         message = "@"+status.user.screen_name+" ヾ（｡＞ω＜｡ ）いいこいいこ"
         post message
       elsif nodefull =~ /もふもふ/
         message = "@"+status.user.screen_name+" もっふもふにしてやんよーっ！ ＞ω＜"
-        post message
-      elsif nodefull =~ /ぺろぺろ/
-        message = "@"+status.user.screen_name+" ぺろっぺろん？"
         post message
       elsif nodefull =~ /ちゅっちゅ/
         message = "@"+status.user.screen_name+" さんがちゅっちゅ （＞ε＜）"
@@ -228,20 +219,6 @@ class TwitterBot
       elsif nodefull =~ /ぎゅー/
         message = "@"+status.user.screen_name+" ぎゅっとぎゅっと"
         post message
-      elsif nodefull =~ /(さみし|さびし)/
-        message = "@"+status.user.screen_name+" だいじょうぶ。わたしはここにいるよ"
-        post message
-      elsif nodefull =~ /クンカクンカ/
-        message = "@"+status.user.screen_name+" くんくん、すんすん"
-        post message
-      elsif nodefull =~ /(mogmog|gokgok)/
-        message = "@"+status.user.screen_name+" おいしそーですしおすし (￣￢￣)ジュル"
-        post message
-      elsif nodefull =~ /(酒|酔|呑)/
-        if status.user.screen_name == "kunio_"
-          message = "@"+status.user.screen_name+" ほどほどにね"
-          post message
-        end
       end
       node = node.next
     end
