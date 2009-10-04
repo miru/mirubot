@@ -46,7 +46,7 @@ class TwitterBot
       difftime = Time.now - starttime
       if difftime < @timewait
         t = @timewait - difftime
-        @logfile.info("## sleep " << t.to_s << "sec idle=" << @idlecount.to_s)
+        @logfile.info("## sleep " << t.to_s << "sec")
         sleep(t)
       end
     end
@@ -80,7 +80,7 @@ class TwitterBot
       
       if status.id > lastid
         # SQLite3にデータ保存
-        sql="insert into posts values(" << status.id.to_s << ", \'" << Kconv.kconv(status.user.screen_name,Kconv::UTF8) << "\', \'" << Kconv.kconv(status.text,Kconv::UTF8) << "\' );"
+        sql="insert into posts values(" << status.id.to_s << ", \'" << status.user.screen_name << "\', \'" << status.text << "\' );"
         @db.execute(sql)
         @logfile.info("SQL: " << sql )
       end
