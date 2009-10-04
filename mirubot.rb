@@ -27,10 +27,14 @@ class TwitterBot
     @replyfirst = true
     @doworkingnowflg = true
     @domarcovflg = true
+
+    @db=SQLite3::Database.new('mirubot.sqlite3')
+    @db.type_translation = true
+
   end
   
   def run
-    @logfile = Logger.new("./log.txt")
+    @logfile = Logger.new("./mirubot.log")
     @logfile.level = Logger::INFO
     @logfile.info("Startup mirubot")
     while true
@@ -59,7 +63,6 @@ class TwitterBot
           @logfile.info("Do marcov")
           flg = false
           while flg == false
-            #flg = self.rssmarcov ""
             flg = self.dbmarcov ""
           end
           @idlecount = 0
@@ -221,6 +224,9 @@ class TwitterBot
       elsif nodefull =~ /ぎゅー/
         message = "@"+status.user.screen_name+" ぎゅっとぎゅっと"
         post message
+      elsif nodefull =~ /ぬるぽ/
+        message = "@"+status.user.screen_name+" ｣(･ ω ･｣) ガッ"
+        post message
       end
       node = node.next
     end
@@ -312,7 +318,6 @@ class TwitterBot
                 if @domarcovflg
                   flg = false
                   while flg == false
-                    #flg = self.rssmarcov "@"+status.user.screen_name+" "
                     flg = self.dbmarcov "@"+status.user.screen_name+" "
                   end
                 end
@@ -323,115 +328,50 @@ class TwitterBot
       end
     end
   end
-  
-  def rssmarcov heading
-    text = String.new
-    text = ""
-    begin
-      friends = @client.my(:friends)
-    rescue
-      return
-    end
-
-    for user in friends
-      userrss = 'http://twitter.com/status/user_timeline/' << user.screen_name << '.rss'
-      begin
-        rss = RSS::Parser.parse(userrss)
-      rescue
-        @logfile.warn("marcov RSS get: " << user.screen_name << " ... fail")
-        next
-      else
-        @logfile.info("marcov RSS get: " << user.screen_name << " ... success")
-      end
-      rss.items.each do | item |
-        a = self.mecabexclude item.title
-        text = text + a
-      end
-    end
-
-    if text.size == 0
-      @logfile.warn("marcov RSS get: all fail")
-      sleep(10)
-      return false
-    end
-
-    mecab = MeCab::Tagger.new("-Owakati")
-    data = Array.new
-    mecab.parse(text + "EOS").split(" ").each_cons(3) do |a|
-      data.push h = {'head' => a[0], 'middle' => a[1], 'end' => a[2]}
-    end
-
-    maxlen = rand(60) + 40
-    d = rand(data.size)
-    t1 = data[d]['head']
-    t2 = data[d]['middle']
-    new_text = heading + t1 + t2
-
-    while true
-      break if new_text.size > maxlen
-      _a = Array.new
-      data.each do |hash|
-        _a.push hash if hash['head'] == t1 && hash['middle'] == t2
-      end
-      break if _a.size == 0
-      num = rand(_a.size)
-      new_text = new_text + _a[num]['end']
-      break if _a[num]['end'] == "EOS"
-      t1 = _a[num]['middle']
-      t2 = _a[num]['end']
-    end
-    post new_text.gsub(/EOS$/,'')
-    return true
-  end
 
   def dbmarcov heading
     text = String.new
     text = ""
 
-    db=SQLite3::Database.new('mirupost.sqlite3')
-    db.type_translation = true
-
-    sql = "select status_text from posts;"
-    result = db.execute(sql)
-    result.each do | post |
-      text = text << " " << post[0]
-    end
-
-    if text.size == 0
-      p "marcov DB timeline get: all fail"
-      return false
-    end
-
-    text = self.mecabexclude text
-
-    mecab = MeCab::Tagger.new("-Owakati")
-    data = Array.new
-    mecab.parse(text + "EOS").split(" ").each_cons(3) do |a|
-      data.push h = {'head' => a[0], 'middle' => a[1], 'end' => a[2]}
-    end
-
     maxlen = rand(60) + 40
-    d = rand(data.size)
-    t1 = data[d]['head']
-    t2 = data[d]['middle']
-    new_text = heading + t1 + t2
 
+    # 最初の1語用ランダム生成
+    sql = "select * from post_elem;"
+    result = @db.execute(sql)
+    datasize = result.size
+
+    d = rand(datasize)
+
+    t1 = result[d][2]
+    t2 = result[d][3]
+    new_text = heading + t1 + t2
+    
+    # 続きを生成
     while true
+      # 最大も自重になったらループを抜ける
       break if new_text.size > maxlen
-      _a = Array.new
-      data.each do |hash|
-        _a.push hash if hash['head'] == t1 && hash['middle'] == t2
-      end
-      break if _a.size == 0
-      num = rand(_a.size)
-      new_text = new_text + _a[num]['end']
-      break if _a[num]['end'] == "EOS"
-      t1 = _a[num]['middle']
-      t2 = _a[num]['end']
+
+      # 要素1要素2と同じものをカウントする
+      sql = "select count() from post_elem where elem1='" << t1 << "' and elem2='" << t2 << "';"
+      result = @db.execute(sql)
+      datasize = result[0][0]
+      d = rand(datasize)
+
+      # 要素1要素2と同じものをSELECTする
+      sql = "select * from post_elem where elem1='" << t1 << "' and elem2='" << t2 << "';"
+      result = @db.execute(sql)
+      break if result.size == 0
+
+      # 選択したものをくっつける
+      new_text = new_text + result[d][4]
+      break if result[d][4] == "EOS"
+      t1 = result[d][3]
+      t2 = result[d][4]
     end
     post new_text.gsub(/EOS$/,'')
     return true
   end
+  
 
   def mecabexclude str
     a = str.sub(/^.*: /," ")

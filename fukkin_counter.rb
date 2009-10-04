@@ -68,7 +68,7 @@ class TwitterBot
       begin
         timeline=@client.timeline_for(:user, :id => user)
       rescue
-        @logfile.warn("Timeline " & user & "get failed")
+        @logfile.warn("Timeline get failed" & user)
         sleep(60)
       else
         failflg = false

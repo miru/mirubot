@@ -15,9 +15,9 @@ require 'sqlite3'
 class TwitterBot
   def initialize client
     @client = client
-    @timewait = 60*10
+    @timewait = 60*3
     
-    @db=SQLite3::Database.new('mirupost.sqlite3')
+    @db=SQLite3::Database.new('mirubot.sqlite3')
     @db.type_translation = true
 
   end
@@ -30,7 +30,7 @@ class TwitterBot
     while true
       starttime = Time.now
 
-      # ¥¿¥¤¥à¥é¥¤¥ó¥Á¥§¥Ã¥¯
+      # ã‚¿ã‚¤ãƒ ãƒ©ã‚¤ãƒ³ãƒã‚§ãƒƒã‚¯
       @logfile.info("Do gettimeline")
       self.gettimeline "miru"
       self.gettimeline "mirupon"
@@ -40,7 +40,10 @@ class TwitterBot
       self.gettimeline "y_beta"
       self.gettimeline "tetetep"
       self.gettimeline "kynbit"
-      #self.gettimeline "nicovideo_tag"
+      self.gettimeline "wakatter"
+      self.gettimeline "ha_ma"
+      self.gettimeline "ichiyonnana_bot"
+      self.gettimeline "nicovideo_tag"
       #self.gettimeline ""
 
       difftime = Time.now - starttime
@@ -52,18 +55,16 @@ class TwitterBot
     end
   end
 
-  # ÄÌ¾ï¥¿¥¤¥à¥é¥¤¥ó¼èÆÀ
+  # é€šå¸¸ã‚¿ã‚¤ãƒ ãƒ©ã‚¤ãƒ³å–å¾—
   def gettimeline userid
     lastid = 0
-
-    # ÊİÂ¸¤µ¤ì¤Æ¤¤¤ë¥æ¡¼¥¶¤Î¥İ¥¹¥È¤ÎºÇ¸å¤ÎID¤ò¼èÆÀ
+    
+    # ä¿å­˜ã•ã‚Œã¦ã„ã‚‹ãƒ¦ãƒ¼ã‚¶ã®ãƒã‚¹ãƒˆã®æœ€å¾Œã®IDã‚’å–å¾—
     sql = "select max(id) from posts where user = '" << userid << "';"
     result = @db.execute(sql)
-    result.each do | maxid |
-      lastid = maxid[0].to_i
-    end
-
-    # ¥¿¥¤¥à¥é¥¤¥ó¼èÆÀ
+    lastid = result[0][0].to_i
+    
+    # ã‚¿ã‚¤ãƒ ãƒ©ã‚¤ãƒ³å–å¾—
     failflg = true
     while failflg
       begin
@@ -75,18 +76,53 @@ class TwitterBot
         failflg = false
       end
     end
-
+    
     timeline.each do | status |
       
-      if status.id > lastid
-        # SQLite3¤Ë¥Ç¡¼¥¿ÊİÂ¸
+      if status.id.to_i > lastid
+        # SQLite3ã«ãƒ‡ãƒ¼ã‚¿ä¿å­˜
         sql="insert into posts values(" << status.id.to_s << ", \'" << status.user.screen_name << "\', \'" << status.text << "\' );"
         @db.execute(sql)
-        @logfile.info("SQL: " << sql )
+        @logfile.debug("SQL: " << sql )
+        
+        self.mecabstore status
       end
     end
   end
-
+  
+  def mecabstore status
+    sql = "select max(id) from post_elem;"
+    result = @db.execute(sql)
+    maxid = result[0][0].to_i
+    
+    text = self.mecabexclude status.text
+    
+    mecab = MeCab::Tagger.new("-Owakati")
+    data = Array.new
+    mecab.parse(text + "EOS").split(" ").each_cons(3) do | a |
+      maxid += 1
+      sql = "insert into post_elem values(" << maxid.to_s << ", " << status.id.to_s << ", '" << a[0] << "', '" << a[1] << "', '" << a[2] << "');"
+      @db.execute(sql)
+      @logfile.debug("SQL: " << sql )
+    end
+  end
+  
+  def mecabexclude str
+    a = str.sub(/^.*: /," ")
+    a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
+    a = a.gsub(/[ï¼ï¼œâŒ’ï¼ï¼œâ†â†’]/," ")
+    a = a.gsub(/ã€.*ã€‘/," ")
+    a = a.gsub(/ï¼ˆ.*ï¼‰/," ")
+    a = a.gsub(/[ã€Œã€]/," ")
+    a = a.gsub(/\[.*\]/," ")
+    a = a.gsub(/\(.*\)/," ")
+    a = a.gsub(/\n/," ")
+    a = a.gsub(/@[A-Za-z0-9_]+/," ")
+    #a = a.gsub(/[A-Za-z]+/," ")
+    a = a.gsub(/[:\.,\/_\*\"]+/,"")
+    return a
+  end
+  
 end
 
 
