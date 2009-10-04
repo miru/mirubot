@@ -40,7 +40,7 @@ class TwitterBot
       self.gettimeline "y_beta"
       self.gettimeline "tetetep"
       self.gettimeline "kynbit"
-      self.gettimeline "nicovideo_tag"
+      #self.gettimeline "nicovideo_tag"
       #self.gettimeline ""
 
       difftime = Time.now - starttime

@@ -121,44 +121,44 @@ class TwitterBot
         sleep(30)
       else
         failflg = false
-      end
-    end
-
-    # フレンドのRSS取得
-    for user in friends
-      if uesr.screen_name == "ha_ru_ka"
-        next
-      elsif user.screen_name == "ichiyonnana_bot"
-        next
-      end
-
-      getfrom=Time.now-60*@workingmin
-      rss = 'http://twitter.com/status/user_timeline/' << user.id.to_s << '.rss'
-      begin
-        userrss = RSS::Parser.parse(rss)
-      rescue
-        @logfile.warn("workingnow RSS get: " << user.screen_name << " ... fail")
-        next
-      else
-        # ポスト数カウント
-        @count = 0
-        userrss.items.each do | item |
-          if item.date > getfrom
-            @count += 1
+        # フレンドのRSS取得
+        for user in friends
+          if uesr.screen_name == "ha_ru_ka"
+            next
+          elsif user.screen_name == "ichiyonnana_bot"
+            next
           end
-        end
-        if @count > @workingth
-          if user.screen_name == "tororosoba"
-            message = "@" << user.screen_name << " あのー " << @workingmin.to_s << "分で"\
-            << @count.to_s << "ポストしてます。お仕事してください。"
+          
+          getfrom=Time.now-60*@workingmin
+          rss = 'http://twitter.com/status/user_timeline/' << user.id.to_s << '.rss'
+          begin
+            userrss = RSS::Parser.parse(rss)
+          rescue
+            @logfile.warn("workingnow RSS get: " << user.screen_name << " ... fail")
+            next
           else
-            message = "@" << user.screen_name << " " << @workingmin.to_s << "分で"\
-            << @count.to_s << "ポストしてるけどだいじょうぶ？"
+            # ポスト数カウント
+            @count = 0
+            userrss.items.each do | item |
+              if item.date > getfrom
+                @count += 1
+              end
+            end
+            if @count > @workingth
+              if user.screen_name == "tororosoba"
+                message = "@" << user.screen_name << " あのー " << @workingmin.to_s << "分で"\
+                << @count.to_s << "ポストしてます。お仕事してください。"
+              else
+                message = "@" << user.screen_name << " " << @workingmin.to_s << "分で"\
+                << @count.to_s << "ポストしてるけどだいじょうぶ？"
+              end
+              post message
+            end
           end
-          post message
         end
       end
     end
+
   end
 
   # ふぁぼるよー
