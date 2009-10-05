@@ -17,7 +17,7 @@ class TwitterBot
     @client = client
     @count = 0
     @workingmin = 30  # min
-    @workingth = 16   # post count
+    @workingth = 15   # post count
     @timewait = 60*3  # sec
     @idleth = 10      # idle threthold
 
@@ -87,7 +87,7 @@ class TwitterBot
         timeline=@client.timeline_for(:friends, :id => @lastid)
       rescue
         @logfile.warn("Timeline get failed")
-        sleep(30)
+        sleep(60)
       else
         failflg = false
         timeline.each do | status |
@@ -121,7 +121,7 @@ class TwitterBot
         friends = @client.my(:friends)
       rescue
         @logfile.warn("Friends get faild")
-        sleep(30)
+        sleep(60)
       else
         failflg = false
         # フレンドのRSS取得
@@ -189,45 +189,41 @@ class TwitterBot
 
   # めかぶかけて単語に反応
   def mecabreply status
-    mecab = MeCab::Tagger.new("-Ochasen")
+    sql = "select bot_name from botlist;"
+    bots = @db.execute(sql)
+    @logfile.debug("SQL execute: " << sql)
 
-    if status.user.screen_name == "mirubot"
-      return
-    elsif status.user.screen_name == "ha_ma"
-      return
-    elsif status.user.screen_name == "wakatter"
-      return
-    elsif status.user.screen_name == "ichiyonnana_bot"
-      return
-    elsif status.user.screen_name == "ha_ru_ka"
-      return
+    bots.each do | bot |
+      if status.user.screen_name == bot[0]
+        @logfile.info("FUNC: mecabreply: bot match")
+        return
+      end
     end
 
+    mecab = MeCab::Tagger.new("-Ochasen")
     a = self.mecabexclude status.text
     node = mecab.parseToNode(a)
+
+    sql = "select id,word from reply_word;"
+    words = @db.execute(sql)
+    @logfile.debug("FUNC: mecabreply: SQL: " << sql)
 
     while node
       nodefull = node.surface << " " << node.feature
       @logfile.debug("mecab: "+nodefull)
-      if nodefull =~  /(はーい)/
-        message = "@"+status.user.screen_name+" ヾ（＞ω＜｡ ）いいこいいこ"
-        post message
-      elsif nodefull =~ /もふもふ/
-        message = "@"+status.user.screen_name+" もっふもふにしてやんよーっ！＞ω＜"
-        post message
-      elsif nodefull =~ /ちゅっちゅ/
-        message = "@"+status.user.screen_name+" さんがちゅっちゅ （＞ε＜）"
-        post message
-      elsif nodefull =~ /なでなで/
-        message = "@"+status.user.screen_name+" ヾ（＞ω＜  ）よしよし"
-        post message
-      elsif nodefull =~ /ぎゅー/
-        message = "@"+status.user.screen_name+" ぎゅっとぎゅっと"
-        post message
-      elsif nodefull =~ /ぬるぽ/
-        message = "@"+status.user.screen_name+" ｣(･ ω ･｣) ガッ"
-        post message
+
+      words.each do | word |
+        if nodefull =~ Regexp.new(word[1])
+          sql = "select reply_word from reply_word_list where parent_id = " << word[0].to_s << ";"
+          result = @db.execute(sql)
+          @log.debug("FUNC: mecabreply: SQL: " << sql)
+          r = rand(result.size)
+          message = "@"+status.user.screen_name+" "+word[r][0]
+          post message
+          break
+        end
       end
+
       node = node.next
     end
   end
@@ -240,7 +236,7 @@ class TwitterBot
         replyline = @client.timeline_for(:replies)
       rescue
         @logfile.warn("Mentions receive fail")
-        sleep(30)
+        sleep(60)
       else
         failflg = false
         replyline.each do |status|
@@ -250,76 +246,76 @@ class TwitterBot
             @replyfirst = false
             return
           end
-          if status.user.screen_name == "mirubot"
-            next
-          elsif status.user.screen_name == "ha_ma"
-            next
-          elsif status.user.screen_name == "wakatter"
-            next
-          elsif status.user.screen_name == "ichiyonnana_bot"
-            next
-          elsif status.user.screen_name == "ha_ru_ka"
-            next
-          else
-            if status.id > @replylastid
-              @replylastid = status.id
-              @logfile.info("<<get RP "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
-              if status.text =~ /(かわい|可愛|かあい|かーいー)/
-                message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
-                post message
-              elsif status.text =~ /ありがと/
-                message = "@"+status.user.screen_name+" どういたしましてっ ＞ω＜"
-                post message
-              elsif status.text =~ /ぴんぐ/
-                message = "@"+status.user.screen_name+" ぽんぐ"
-                post message
-              elsif status.text =~ /(状態|じょうたい)/
-                if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
-                  @domarcovflg = true
-                  message = "@"+status.user.screen_name+" マルコフ連鎖:"
-                  if @domarcovflg
-                    message = message+"ON"
-                  else
-                    message = message+"OFF"
-                  end
-                  message = message+" ポスト数カウント: "
-                  if @doworkingnowflg
-                    message = message+"ON"
-                  else
-                    message = message+"OFF"
-                  end
-                  post message
-                end
-              elsif status.text =~ /(マルコフ|まるこふ)(開始|かいし)/
-                if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
-                  @domarcovflg = true
-                  message = "@"+status.user.screen_name+" マルコフ連鎖機能開始します。"
-                  post message
-                end
-              elsif status.text =~ /(マルコフ|まるこふ)(停止|ていし)/
-                if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
-                  @domarcovflg = false
-                  message ="@"+status.user.screen_name+" マルコフ連鎖機能停止します。"
-                  post message
-                end
-              elsif status.text =~ /(カウント|かうんと)(開始|かいし)/
-                if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
-                  @doworkingnowflg = true
-                  message ="@"+status.user.screen_name+" カウント機能開始します。"
-                  post message
-                end
-              elsif status.text =~ /(カウント|カウント)(停止|ていし)/
-                if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
-                  @doworkingnowflg = false
-                  message = "@"+status.user.screen_name+" カウント機能停止します。"
-                  post message
-                end
-              else
+
+          sql = "select bot_name from botlist;"
+          bots = @db.execute(sql)
+          @logfile.debug("SQL execute: " << sql)
+          
+          bots.each do | bot |
+            if status.user.screen_name == bot[0]
+              @log.info("FUNC: atreply: bot match")
+              next
+            end
+          end
+
+          if status.id > @replylastid
+            @replylastid = status.id
+            @logfile.info("<<get RP "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
+            if status.text =~ /(かわい|可愛|かあい|かーいー)/
+              message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
+              post message
+            elsif status.text =~ /ありがと/
+              message = "@"+status.user.screen_name+" どういたしましてっ ＞ω＜"
+              post message
+            elsif status.text =~ /ぴんぐ/
+              message = "@"+status.user.screen_name+" ぽんぐ"
+              post message
+            elsif status.text =~ /(状態|じょうたい)/
+              if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
+                @domarcovflg = true
+                message = "@"+status.user.screen_name+" マルコフ連鎖:"
                 if @domarcovflg
-                  flg = false
-                  while flg == false
-                    flg = self.dbmarcov "@"+status.user.screen_name+" "
-                  end
+                  message = message+"ON"
+                else
+                  message = message+"OFF"
+                end
+                message = message+" ポスト数カウント: "
+                if @doworkingnowflg
+                  message = message+"ON"
+                else
+                  message = message+"OFF"
+                end
+                post message
+              end
+            elsif status.text =~ /(マルコフ|まるこふ)(開始|かいし)/
+              if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
+                @domarcovflg = true
+                message = "@"+status.user.screen_name+" マルコフ連鎖機能開始します。"
+                post message
+              end
+            elsif status.text =~ /(マルコフ|まるこふ)(停止|ていし)/
+              if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
+                @domarcovflg = false
+                message ="@"+status.user.screen_name+" マルコフ連鎖機能停止します。"
+                post message
+              end
+            elsif status.text =~ /(カウント|かうんと)(開始|かいし)/
+              if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
+                @doworkingnowflg = true
+                message ="@"+status.user.screen_name+" カウント機能開始します。"
+                post message
+              end
+            elsif status.text =~ /(カウント|カウント)(停止|ていし)/
+              if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
+                @doworkingnowflg = false
+                message = "@"+status.user.screen_name+" カウント機能停止します。"
+                post message
+              end
+            else
+              if @domarcovflg
+                flg = false
+                while flg == false
+                  flg = self.dbmarcov "@"+status.user.screen_name+" "
                 end
               end
             end
@@ -328,6 +324,7 @@ class TwitterBot
       end
     end
   end
+
 
   def dbmarcov heading
     text = String.new
@@ -396,7 +393,7 @@ class TwitterBot
         @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
       rescue
         @logfile.warn(">>send fail: "+message)
-        sleep(10)
+        sleep(30)
       else
         @logfile.info(">>send message: "+message)
         failflg = false

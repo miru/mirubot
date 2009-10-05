@@ -117,12 +117,15 @@ class TwitterBot
       if lastdt.yday < postdt.yday
         sql = "select * from fukkin where user_name = '" << user << "';"
         result = @db.execute(sql)
+        @logfile.info("SQL execute: " << sql)
         if (lastdt.yday == (postdt.yday-1)) || ((lastdt.yday==365)&&(postdt.yday==1)) || ((lastdt.yday==366)&&(postdt.yday==1))
           # 日付が連続してる場合はインクリメント
           sql = "update fukkin set last_date=" << postdt.to_i.to_s << ", total_count=" << (result[0][2]+1).to_s << ", continuity_count=" << (result[0][3]+1).to_s << " where user_name='" << user << "';"
           @db.execute(sql)
+          @logfile.info("SQL execute: " << sql)
           sql = "select * from fukkin where user_name = '" << user << "';"
           result = @db.execute(sql)
+          @logfile.info("SQL execute: " << sql)
           message = "@" << user << " さんは、" << (result[0][3]).to_s << "日連続で腹筋しています（カウント合計 " <<  (result[0][2]).to_s << "回）"
           post message
         else
@@ -131,6 +134,7 @@ class TwitterBot
           @db.execute(sql)
           sql = "select * from fukkin where user_name = '" << user << "';"
           result = @db.execute(sql)
+          @logfile.info("SQL execute: " << sql)
           message = "@" << user << " さんが、腹筋を再開しました（カウント合計 " <<  (result[0][2]).to_s << "回）"
           post message
         end
@@ -146,7 +150,7 @@ class TwitterBot
         @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
       rescue
         @logfile.warn(">>send fail: "+message)
-        sleep(10)
+        sleep(30)
       else
         @logfile.info(">>send message: "+message)
         failflg = false
