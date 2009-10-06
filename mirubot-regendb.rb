@@ -6,6 +6,7 @@ require "MeCab"
 require 'logger'
 require 'sqlite3'
 
+$KCODE = "UTF-8"
 
 db=SQLite3::Database.new('mirubot.sqlite3')
 db.type_translation = true
@@ -18,8 +19,9 @@ timeline.each do | status |
   sql = "select max(id) from post_elem;"
   result = db.execute(sql)
   maxid = result[0][0].to_i
-  
-  text = status[1].sub(/^.*: /," ")
+
+  text = status[1]
+  text = text.sub(/^.*: /," ")
   text = text.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
   text = text.gsub(/[＞＜⌒＞＜←→]/," ")
   text = text.gsub(/【.*】/," ")
