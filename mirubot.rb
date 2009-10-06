@@ -94,19 +94,33 @@ class TwitterBot
           if status.id > @lastid
             @lastid = status.id
           end
-          if status.id > oldid
-            if status.user.screen_name == "mirubot" 
-              next
-            elsif status.user.screen_name == "ha_ru_ka"
-              next
-            elsif status.user.screen_name == "ichiyonnana_bot"
-              next
+
+          sql = "select bot_name from botlist;"
+
+          failflg = true
+          bot = Array.new
+          while failflg
+            begin
+              bots = @db.execute(sql)
+            rescue
+              sleep(5)
             else
-              @logfile.info("<<get TL "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
-              #self.fav status
-              self.mecabreply status
+              failflg = false
             end
           end
+
+          @logfile.debug("SQL execute: " << sql)
+          
+          bots.each do | bot |
+            if status.user.screen_name == bot[0]
+              @logfile.debug("FUNC: gettimeline: bot match")
+              next
+            end
+          end
+
+          @logfile.info("<<get TL "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
+          #self.fav status
+          self.mecabreply status
         end
       end
     end
@@ -190,7 +204,18 @@ class TwitterBot
   # めかぶかけて単語に反応
   def mecabreply status
     sql = "select bot_name from botlist;"
-    bots = @db.execute(sql)
+
+    failflg = true
+    bots = Array.new
+    while failflg
+      begin
+        bots = @db.execute(sql)
+      rescue
+        sleep(5)
+      else
+        failflg = false
+      end
+    end
     @logfile.debug("SQL execute: " << sql)
 
     bots.each do | bot |
@@ -205,7 +230,19 @@ class TwitterBot
     node = mecab.parseToNode(a)
 
     sql = "select id,word from reply_word;"
-    words = @db.execute(sql)
+
+    failflg = true
+    words = Array.new
+    while failflg
+      begin
+        words = @db.execute(sql)
+      rescue
+        sleep(5)
+      else
+        failflg = false
+      end
+    end
+
     @logfile.debug("FUNC: mecabreply: SQL: " << sql)
 
     while node
@@ -215,7 +252,19 @@ class TwitterBot
       words.each do | word |
         if nodefull =~ Regexp.new(word[1])
           sql = "select reply_word from reply_word_list where parent_id = " << word[0].to_s << ";"
-          result = @db.execute(sql)
+
+          failflg = true
+          result = Array.new
+          while failflg
+            begin
+              result = @db.execute(sql)
+            rescue
+              sleep(5)
+            else
+              failflg = false
+            end
+          end
+
           @log.debug("FUNC: mecabreply: SQL: " << sql)
           r = rand(result.size)
           message = "@"+status.user.screen_name+" "+word[r][0]
@@ -248,7 +297,17 @@ class TwitterBot
           end
 
           sql = "select bot_name from botlist;"
-          bots = @db.execute(sql)
+          failflg = true
+          bot = Array.new
+          while failflg
+            begin
+              bots = @db.execute(sql)
+            rescue
+              sleep(5)
+            else
+              failflg = false
+            end
+          end
           @logfile.debug("SQL execute: " << sql)
           
           bots.each do | bot |
@@ -334,7 +393,18 @@ class TwitterBot
 
     # 最初の1語用ランダム生成
     sql = "select * from post_elem;"
-    result = @db.execute(sql)
+    failflg = true
+    result = Array.new
+    while failflg
+      begin
+        result = @db.execute(sql)
+      rescue
+        sleep(5)
+      else
+        failflg = false
+      end
+    end
+    
     datasize = result.size
 
     d = rand(datasize)
@@ -350,13 +420,36 @@ class TwitterBot
 
       # 要素1要素2と同じものをカウントする
       sql = "select count() from post_elem where elem1='" << t1 << "' and elem2='" << t2 << "';"
-      result = @db.execute(sql)
+
+      failflg = true
+      result = Array.new
+      while failflg
+        begin
+          result = @db.execute(sql)
+        rescue
+          sleep(5)
+        else
+          failflg = false
+        end
+      end
+      
       datasize = result[0][0]
       d = rand(datasize)
 
       # 要素1要素2と同じものをSELECTする
       sql = "select * from post_elem where elem1='" << t1 << "' and elem2='" << t2 << "';"
-      result = @db.execute(sql)
+      failflg = true
+      result = Array.new
+      while failflg
+        begin
+          result = @db.execute(sql)
+        rescue
+          sleep(5)
+        else
+          failflg = false
+        end
+      end
+      
       break if result.size == 0
 
       # 選択したものをくっつける

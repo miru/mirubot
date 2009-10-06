@@ -61,7 +61,18 @@ class TwitterBot
     
     # 保存されているユーザのポストの最後のIDを取得
     sql = "select max(id) from posts where user = '" << userid << "';"
-    result = @db.execute(sql)
+    failflg = true
+    result = Array.new
+    while failflg
+      begin
+        result = @db.execute(sql)
+      rescue
+        sleep(5)
+      else
+        failflg = false
+      end
+    end
+
     lastid = result[0][0].to_i
     
     # タイムライン取得
@@ -70,8 +81,8 @@ class TwitterBot
       begin
         timeline=@client.timeline_for(:user, :id => userid)
       rescue
-        @logfile.warn("Timeline " & userid & "get failed")
-        sleep(30)
+        @logfile.warn("Timeline " << userid << "get failed")
+        sleep(60)
       else
         failflg = false
       end
@@ -82,7 +93,16 @@ class TwitterBot
       if status.id.to_i > lastid
         # SQLite3にデータ保存
         sql="insert into posts values(" << status.id.to_s << ", \'" << status.user.screen_name << "\', \'" << status.text << "\' );"
-        @db.execute(sql)
+        failflg = true
+        while failflg
+          begin
+            @db.execute(sql)
+          rescue
+            sleep(5)
+          else
+            failflg = false
+          end
+        end
         @logfile.debug("SQL: " << sql )
         
         self.mecabstore status
@@ -92,7 +112,17 @@ class TwitterBot
   
   def mecabstore status
     sql = "select max(id) from post_elem;"
-    result = @db.execute(sql)
+    failflg = true
+    result = Array.new
+    while failflg
+      begin
+        result = @db.execute(sql)
+      rescue
+        sleep(5)
+      else
+        failflg = false
+      end
+    end
     maxid = result[0][0].to_i
     
     text = self.mecabexclude status.text
@@ -102,7 +132,17 @@ class TwitterBot
     mecab.parse(text + "EOS").split(" ").each_cons(3) do | a |
       maxid += 1
       sql = "insert into post_elem values(" << maxid.to_s << ", " << status.id.to_s << ", '" << a[0] << "', '" << a[1] << "', '" << a[2] << "');"
-      @db.execute(sql)
+
+      failflg = true
+      while failflg
+        begin
+          @db.execute(sql)
+        rescue
+          sleep(5)
+        else
+          failflg = false
+        end
+      end
       @logfile.debug("SQL: " << sql )
     end
   end
@@ -118,7 +158,7 @@ class TwitterBot
     a = a.gsub(/\(.*\)/," ")
     a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/," ")
-    #a = a.gsub(/[A-Za-z]+/," ")
+    a = a.gsub(/[A-Za-z]+/," ")
     a = a.gsub(/[:\.,\/_\*\"]+/,"")
     return a
   end
