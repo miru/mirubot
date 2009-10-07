@@ -244,7 +244,6 @@ class TwitterBot
         failflg = false
       end
     end
-
     @logfile.debug("FUNC: mecabreply: SQL: " << sql)
 
     while node
@@ -267,10 +266,11 @@ class TwitterBot
             end
           end
 
-          @logfile.debug("FUNC: mecabreply: SQL: " << sql)
+          @logfile.info("FUNC: mecabreply: SQL: " << sql)
           r = rand(result.size)
-          message = "@" << status.user.screen_name << " " << word[r][0]
+          message = "@" << status.user.screen_name << " " << result[r][0]
           post message
+
           break
         end
       end

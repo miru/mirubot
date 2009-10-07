@@ -58,7 +58,7 @@ class TwitterBot
   # 通常タイムライン取得
   def gettimeline userid
     lastid = 0
-    @logfile.inf("Get timeline: " << userid)
+    @logfile.info("Get timeline: " << userid)
     
     # 保存されているユーザのポストの最後のIDを取得
     sql = "select max(id) from posts where user = '" << userid << "';"
@@ -131,6 +131,22 @@ class TwitterBot
     mecab = MeCab::Tagger.new("-Owakati")
     data = Array.new
     mecab.parse(text + "EOS").split(" ").each_cons(3) do | a |
+
+      if a[0] =~ /^[ー。、ｗ]/
+        next
+      end
+
+      if a[0]=="ます"
+        next
+      end
+
+      if (a[0]=="な") && (a[1]=="の") && (a[2]=="よ")
+        next
+      end
+      if (a[0]=="の") && (a[1]=="よ") && (a[2]=="。")
+        next
+      end
+
       maxid += 1
       sql = "insert into post_elem values(" << maxid.to_s << ", " << status.id.to_s << ", '" << a[0] << "', '" << a[1] << "', '" << a[2] << "');"
 
