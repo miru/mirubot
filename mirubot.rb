@@ -350,7 +350,7 @@ class TwitterBot
     text = String.new
     text = ""
 
-    maxlen = rand(60) + 40
+    maxlen = rand(100) + 40
 
     # 最初の1語用ランダム生成
     sql = "select * from post_elem;"
