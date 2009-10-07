@@ -12,7 +12,7 @@ require "MeCab"
 require 'logger'
 require 'sqlite3'
 
-$KCODE = "UTF-8"
+# $KCODE = "UTF-8"
 
 class TwitterBot
   def initialize client
@@ -289,6 +289,7 @@ class TwitterBot
         @logfile.warn("Mentions receive fail")
         sleep(60)
       else
+        failflg = false
         replyline.each do |status|
           # 一番最初はリプライしない
           if @replyfirst
@@ -300,7 +301,7 @@ class TwitterBot
           sql = "select bot_name from botlist;"
           failflg2 = true
           bot = Array.new
-          while failflg
+          while failflg2
             begin
               bots = @db.execute(sql)
             rescue
@@ -330,47 +331,6 @@ class TwitterBot
             elsif status.text =~ /ぴんぐ/
               message = "@"+status.user.screen_name+" ぽんぐ"
               post message
-            elsif status.text =~ /(状態|じょうたい)/
-              if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
-                @domarcovflg = true
-                message = "@"+status.user.screen_name+" マルコフ連鎖:"
-                if @domarcovflg
-                  message = message+"ON"
-                else
-                  message = message+"OFF"
-                end
-                message = message+" ポスト数カウント: "
-                if @doworkingnowflg
-                  message = message+"ON"
-                else
-                  message = message+"OFF"
-                end
-                post message
-              end
-            elsif status.text =~ /(マルコフ|まるこふ)(開始|かいし)/
-              if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
-                @domarcovflg = true
-                message = "@"+status.user.screen_name+" マルコフ連鎖機能開始します。"
-                post message
-              end
-            elsif status.text =~ /(マルコフ|まるこふ)(停止|ていし)/
-              if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
-                @domarcovflg = false
-                message ="@"+status.user.screen_name+" マルコフ連鎖機能停止します。"
-                post message
-              end
-            elsif status.text =~ /(カウント|かうんと)(開始|かいし)/
-              if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
-                @doworkingnowflg = true
-                message ="@"+status.user.screen_name+" カウント機能開始します。"
-                post message
-              end
-            elsif status.text =~ /(カウント|カウント)(停止|ていし)/
-              if (status.user.screen_name == "miru") || (status.user.screen_name == "mirupon")
-                @doworkingnowflg = false
-                message = "@"+status.user.screen_name+" カウント機能停止します。"
-                post message
-              end
             else
               if @domarcovflg
                 flg = false
@@ -405,37 +365,16 @@ class TwitterBot
         failflg = false
       end
     end
-    
-    datasize = result.size
-
-    d = rand(datasize)
+    d = rand(result.size)
 
     t1 = result[d][2]
     t2 = result[d][3]
-    new_text = heading + t1 + t2
+    new_text = heading << t1 << t2
     
     # 続きを生成
     while true
-      # 最大も自重になったらループを抜ける
+      # 最大文字以上になったらループを抜ける
       break if new_text.size > maxlen
-
-      # 要素1要素2と同じものをカウントする
-      sql = "select count() from post_elem where elem1='" << t1 << "' and elem2='" << t2 << "';"
-
-      failflg = true
-      result = Array.new
-      while failflg
-        begin
-          result = @db.execute(sql)
-        rescue
-          sleep(5)
-        else
-          failflg = false
-        end
-      end
-      
-      datasize = result[0][0]
-      d = rand(datasize)
 
       # 要素1要素2と同じものをSELECTする
       sql = "select * from post_elem where elem1='" << t1 << "' and elem2='" << t2 << "';"
@@ -450,12 +389,16 @@ class TwitterBot
           failflg = false
         end
       end
-      
+
+      # なかったらループを抜ける
       break if result.size == 0
 
+      # ランダムで選択
+      d = rand(result.size)
+
       # 選択したものをくっつける
-      break if result[d][4] == "EOS"
       new_text = new_text + result[d][4]
+      break if result[d][4] == "EOS"
       t1 = result[d][3]
       t2 = result[d][4]
     end

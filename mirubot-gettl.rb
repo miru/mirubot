@@ -58,6 +58,7 @@ class TwitterBot
   # 通常タイムライン取得
   def gettimeline userid
     lastid = 0
+    @logfile.inf("Get timeline: " << userid)
     
     # 保存されているユーザのポストの最後のIDを取得
     sql = "select max(id) from posts where user = '" << userid << "';"
@@ -150,7 +151,7 @@ class TwitterBot
   def mecabexclude str
     a = str.sub(/^.*: /," ")
     a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
-    a = a.gsub(/[[＞＜⌒＞＜←→]　]/," ")
+    a = a.gsub(/[＞＜⌒＞＜←→　]/," ")
     a = a.gsub(/【.*】/," ")
     a = a.gsub(/（.*）/," ")
     a = a.gsub(/[「」]/," ")
