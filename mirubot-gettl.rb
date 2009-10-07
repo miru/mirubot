@@ -15,7 +15,7 @@ require 'sqlite3'
 class TwitterBot
   def initialize client
     @client = client
-    @timewait = 60*3
+    @timewait = 60*10
     
     @db=SQLite3::Database.new('mirubot.sqlite3')
     @db.type_translation = true
@@ -150,7 +150,7 @@ class TwitterBot
   def mecabexclude str
     a = str.sub(/^.*: /," ")
     a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
-    a = a.gsub(/[＞＜⌒＞＜←→]/," ")
+    a = a.gsub(/[[＞＜⌒＞＜←→]　]/," ")
     a = a.gsub(/【.*】/," ")
     a = a.gsub(/（.*）/," ")
     a = a.gsub(/[「」]/," ")

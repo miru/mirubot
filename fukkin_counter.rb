@@ -11,10 +11,12 @@ require "MeCab"
 require 'logger'
 require 'sqlite3'
 
+$KCODE = "UTF-8"
+
 class TwitterBot
   def initialize client
     @client = client
-    @timewait = 60*3  # sec
+    @timewait = 60*5  # sec
     @replyfirst = true
 
     @db=SQLite3::Database.new('fukkin_counter.sqlite3')

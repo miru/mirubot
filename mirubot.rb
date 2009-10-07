@@ -12,6 +12,8 @@ require "MeCab"
 require 'logger'
 require 'sqlite3'
 
+$KCODE = "UTF-8"
+
 class TwitterBot
   def initialize client
     @client = client
@@ -19,7 +21,7 @@ class TwitterBot
     @workingmin = 30  # min
     @workingth = 15   # post count
     @timewait = 60*3  # sec
-    @idleth = 10      # idle threthold
+    @idleth = 5       # idle threthold
 
     @idlecount = 0
     @lastid = 0
@@ -265,9 +267,9 @@ class TwitterBot
             end
           end
 
-          @log.debug("FUNC: mecabreply: SQL: " << sql)
+          @logfile.debug("FUNC: mecabreply: SQL: " << sql)
           r = rand(result.size)
-          message = "@"+status.user.screen_name+" "+word[r][0]
+          message = "@" << status.user.screen_name << " " << word[r][0]
           post message
           break
         end
@@ -287,7 +289,6 @@ class TwitterBot
         @logfile.warn("Mentions receive fail")
         sleep(60)
       else
-        failflg = false
         replyline.each do |status|
           # 一番最初はリプライしない
           if @replyfirst
@@ -297,7 +298,7 @@ class TwitterBot
           end
 
           sql = "select bot_name from botlist;"
-          failflg = true
+          failflg2 = true
           bot = Array.new
           while failflg
             begin
@@ -305,21 +306,21 @@ class TwitterBot
             rescue
               sleep(5)
             else
-              failflg = false
+              failflg2 = false
             end
           end
           @logfile.debug("SQL execute: " << sql)
           
           bots.each do | bot |
             if status.user.screen_name == bot[0]
-              @log.info("FUNC: atreply: bot match")
+              @logfile.info("FUNC: atreply: bot match")
               next
             end
           end
 
           if status.id > @replylastid
             @replylastid = status.id
-            @logfile.info("<<get RP "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
+            @logfile.info("<<get RP " << status.user.screen_name << ": " << status.text << " ID:" << status.id.to_s)
             if status.text =~ /(かわい|可愛|かあい|かーいー)/
               message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
               post message
@@ -374,7 +375,7 @@ class TwitterBot
               if @domarcovflg
                 flg = false
                 while flg == false
-                  flg = self.dbmarcov "@"+status.user.screen_name+" "
+                  flg = self.dbmarcov "@" << status.user.screen_name << " "
                 end
               end
             end
@@ -453,8 +454,8 @@ class TwitterBot
       break if result.size == 0
 
       # 選択したものをくっつける
-      new_text = new_text + result[d][4]
       break if result[d][4] == "EOS"
+      new_text = new_text + result[d][4]
       t1 = result[d][3]
       t2 = result[d][4]
     end
@@ -485,10 +486,10 @@ class TwitterBot
       begin
         @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
       rescue
-        @logfile.warn(">>send fail: "+message)
+        @logfile.warn(">>send fail: " << message)
         sleep(30)
       else
-        @logfile.info(">>send message: "+message)
+        @logfile.info(">>send message: " << message)
         failflg = false
       end
     end
