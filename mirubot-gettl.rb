@@ -181,9 +181,9 @@ class TwitterBot
     a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/," ")
     a = a.gsub(/[A-Za-z]+/," ")
-    a = a.gsub(/[:\.,\/_\*\"]+/,"")
-    a = a.gsub(/ですね、わかります/)
-    a = a.gsub(/☆彡/)
+    a = a.gsub(/[:\.,\/_\*\"]+/," ")
+    a = a.gsub(/ですね、わかります/," ")
+    #a = a.gsub(/☆彡/," ")
     return a
   end
   

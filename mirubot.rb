@@ -115,7 +115,7 @@ class TwitterBot
           
           bots.each do | bot |
             if status.user.screen_name == bot[0]
-              @logfile.debug("FUNC: gettimeline: bot match")
+              @logfile.debug("FUNC: gettimeline: bot match:" << bot[0])
               next
             end
           end
@@ -142,11 +142,26 @@ class TwitterBot
         failflg = false
         # フレンドのRSS取得
         for user in friends
-          if uesr.screen_name == "ha_ru_ka"
-            next
-          elsif user.screen_name == "ichiyonnana_bot"
-            next
+          sql = "select bot_name from botlist;"
+          failflg2 = true
+          bot = Array.new
+          while failflg2
+            begin
+              bots = @db.execute(sql)
+            rescue
+              sleep(5)
+            else
+              failflg2 = false
+            end
           end
+          @logfile.debug("SQL execute: " << sql)
+          bots.each do | bot |
+            if user.screen_name == bot[0]
+              @logfile.debug("FUNC: gettimeline: bot match: " << bot[0])
+              next
+            end
+          end
+
           
           getfrom=Time.now-60*@workingmin
           rss = 'http://twitter.com/status/user_timeline/' << user.id.to_s << '.rss'
@@ -222,7 +237,7 @@ class TwitterBot
 
     bots.each do | bot |
       if status.user.screen_name == bot[0]
-        @logfile.info("FUNC: mecabreply: bot match")
+        @logfile.info("FUNC: mecabreply: bot match: " << bot[0])
         return
       end
     end
@@ -314,7 +329,7 @@ class TwitterBot
           
           bots.each do | bot |
             if status.user.screen_name == bot[0]
-              @logfile.info("FUNC: atreply: bot match")
+              @logfile.info("FUNC: atreply: bot match:" << bot[0])
               next
             end
           end
@@ -419,7 +434,7 @@ class TwitterBot
     a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/," ")
     #a = a.gsub(/[A-Za-z]+/," ")
-    a = a.gsub(/[:\.,\/_\*\"]+/,"")
+    a = a.gsub(/[:\.,\/_\*\"]+/," ")
     return a
   end
 
