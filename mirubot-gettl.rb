@@ -132,14 +132,19 @@ class TwitterBot
     data = Array.new
     mecab.parse(text + "EOS").split(" ").each_cons(3) do | a |
 
-      if a[0] =~ /^[ー。、ｗ]/
+      if a[0] =~ /^[ー。、ｗ！]/
         next
       end
 
       if a[0]=="ます"
         next
       end
-
+      if a[0]=="を"
+        next
+      end
+      if a[1]=="☆" and a[2]=="彡"
+        next
+      end
       if (a[0]=="な") && (a[1]=="の") && (a[2]=="よ")
         next
       end
@@ -177,6 +182,8 @@ class TwitterBot
     a = a.gsub(/@[A-Za-z0-9_]+/," ")
     a = a.gsub(/[A-Za-z]+/," ")
     a = a.gsub(/[:\.,\/_\*\"]+/,"")
+    a = a.gsub(/ですね、わかります/)
+    a = a.gsub(/☆彡/)
     return a
   end
   
