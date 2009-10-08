@@ -19,14 +19,16 @@ class TwitterBot
     @client = client
     @count = 0
     @workingmin = 30  # min
-    @workingth = 15   # post count
+    @workingth = 20   # post count
     @timewait = 60*3  # sec
     @idleth = 5       # idle threthold
 
     @idlecount = 0
     @lastid = 0
-    @replylastid = 0
-    @replyfirst = true
+
+    @lastdt = Time.new
+    @lastrepdt = Time.new
+
     @doworkingnowflg = true
     @domarcovflg = true
 
@@ -39,6 +41,15 @@ class TwitterBot
     @logfile = Logger.new("./mirubot.log")
     @logfile.level = Logger::INFO
     @logfile.info("Startup mirubot")
+
+    sql = "select count() from posts;"
+    post_cnt = @db.execute(sql)
+    sql = "select count() from post_elem;"
+    elem_cnt = @db.execute(sql)
+
+    message = "現在の保存ポスト数: " << post_cnt[0][0].to_s << "  形態素解析数: " << elem_cnt[0][0].to_s << " ですよー #botinfo"
+    #post message
+
     while true
       starttime = Time.now
 
@@ -66,6 +77,8 @@ class TwitterBot
           flg = false
           while flg == false
             flg = self.dbmarcov ""
+            sleep(60)
+            self.dbmarcov2 ""
           end
           @idlecount = 0
         end
@@ -82,7 +95,6 @@ class TwitterBot
 
   # 通常タイムライン取得
   def gettimeline
-    oldid = @lastid
     failflg = true
     while failflg
       begin
@@ -92,41 +104,22 @@ class TwitterBot
         sleep(60)
       else
         failflg = false
-        timeline.each do | status |
-          if status.id > @lastid
-            @lastid = status.id
-          end
-
-          sql = "select bot_name from botlist;"
-
-          failflg = true
-          bot = Array.new
-          while failflg
-            begin
-              bots = @db.execute(sql)
-            rescue
-              sleep(5)
-            else
-              failflg = false
-            end
-          end
-
-          @logfile.debug("SQL execute: " << sql)
-          
-          bots.each do | bot |
-            if status.user.screen_name == bot[0]
-              @logfile.debug("FUNC: gettimeline: bot match:" << bot[0])
-              next
-            end
-          end
-
-          @logfile.info("<<get TL "+status.user.screen_name+": "+status.text+" ID:"+status.id.to_s)
-          #self.fav status
-          self.mecabreply status
-        end
       end
     end
+
+    timeline.each do | status |
+      if self.botchk status.user.screen_name
+        next
+      end
+      
+      @logfile.info("<<get TL " << status.user.screen_name << ": " << status.text+" ID:" << status.id.to_s)
+      #self.fav status
+      self.mecabreply status
+    end
+
+    @lastdt = Time.now
   end
+
 
   # 仕事してください
   def workingnow
@@ -142,57 +135,50 @@ class TwitterBot
         failflg = false
         # フレンドのRSS取得
         for user in friends
-          sql = "select bot_name from botlist;"
+          if self.botchk user.screen_name
+            next
+          end
+          
+          getfrom=Time.now-60*@workingmin
+          rss = 'http://twitter.com/status/user_timeline/' << user.id.to_s << '.rss'
           failflg2 = true
-          bot = Array.new
+          count = 0
           while failflg2
+            if count>5
+              next
+            end
+            count += 1
             begin
-              bots = @db.execute(sql)
+              userrss = RSS::Parser.parse(rss)
             rescue
-              sleep(5)
+              @logfile.warn("workingnow RSS get: " << user.screen_name << " ... fail")
+              sleep(1)
+              next
             else
               failflg2 = false
             end
           end
-          @logfile.debug("SQL execute: " << sql)
-          bots.each do | bot |
-            if user.screen_name == bot[0]
-              @logfile.debug("FUNC: gettimeline: bot match: " << bot[0])
-              next
+
+          # ポスト数カウント
+          @count = 0
+          userrss.items.each do | item |
+            if item.date > getfrom
+              @count += 1
             end
           end
-
-          
-          getfrom=Time.now-60*@workingmin
-          rss = 'http://twitter.com/status/user_timeline/' << user.id.to_s << '.rss'
-          begin
-            userrss = RSS::Parser.parse(rss)
-          rescue
-            @logfile.warn("workingnow RSS get: " << user.screen_name << " ... fail")
-            next
-          else
-            # ポスト数カウント
-            @count = 0
-            userrss.items.each do | item |
-              if item.date > getfrom
-                @count += 1
-              end
+          if @count > @workingth
+            if user.screen_name == "tororosoba"
+              message = "@" << user.screen_name << " あのー " << @workingmin.to_s << "分で"\
+              << @count.to_s << "ポストしてます。お仕事してください。"
+            else
+              message = "@" << user.screen_name << " " << @workingmin.to_s << "分で"\
+              << @count.to_s << "ポストしてるけどだいじょうぶ？"
             end
-            if @count > @workingth
-              if user.screen_name == "tororosoba"
-                message = "@" << user.screen_name << " あのー " << @workingmin.to_s << "分で"\
-                << @count.to_s << "ポストしてます。お仕事してください。"
-              else
-                message = "@" << user.screen_name << " " << @workingmin.to_s << "分で"\
-                << @count.to_s << "ポストしてるけどだいじょうぶ？"
-              end
-              post message
-            end
+            post message
           end
         end
       end
     end
-
   end
 
   # ふぁぼるよー
@@ -222,34 +208,17 @@ class TwitterBot
   def mecabreply status
     sql = "select bot_name from botlist;"
 
-    failflg = true
-    bots = Array.new
-    while failflg
-      begin
-        bots = @db.execute(sql)
-      rescue
-        sleep(5)
-      else
-        failflg = false
-      end
-    end
-    @logfile.debug("SQL execute: " << sql)
-
-    bots.each do | bot |
-      if status.user.screen_name == bot[0]
-        @logfile.info("FUNC: mecabreply: bot match: " << bot[0])
-        return
-      end
+    if self.botchk status.user.screen_name
+      return
     end
 
     mecab = MeCab::Tagger.new("-Ochasen")
     a = self.mecabexclude status.text
     node = mecab.parseToNode(a)
 
-    sql = "select id,word from reply_word;"
-
     failflg = true
     words = Array.new
+    sql = "select id,word from reply_word;"
     while failflg
       begin
         words = @db.execute(sql)
@@ -304,63 +273,50 @@ class TwitterBot
         @logfile.warn("Mentions receive fail")
         sleep(60)
       else
-        failflg = false
-        replyline.each do |status|
-          # 一番最初はリプライしない
-          if @replyfirst
-            @replylastid = status.id
-            @replyfirst = false
-            return
-          end
+        failflg = false        
+      end
+    end
 
-          sql = "select bot_name from botlist;"
-          failflg2 = true
-          bot = Array.new
-          while failflg2
-            begin
-              bots = @db.execute(sql)
-            rescue
-              sleep(5)
-            else
-              failflg2 = false
-            end
-          end
-          @logfile.debug("SQL execute: " << sql)
-          
-          bots.each do | bot |
-            if status.user.screen_name == bot[0]
-              @logfile.info("FUNC: atreply: bot match:" << bot[0])
-              next
-            end
-          end
+    # DBから反応単語を抜き出しておく
+    sql = "select * from sence_word;"
+    sencelist = @db.execute(sql)
+    
+    replyline.each do | status |
+      # 古い発言は反応しない
+      if status.created_at < @lastrepdt
+        next
+      end
 
-          if status.id > @replylastid
-            @replylastid = status.id
-            @logfile.info("<<get RP " << status.user.screen_name << ": " << status.text << " ID:" << status.id.to_s)
-            if status.text =~ /(かわい|可愛|かあい|かーいー)/
-              message = "@"+status.user.screen_name+" ありがとね (〃▽〃)"
-              post message
-            elsif status.text =~ /ありがと/
-              message = "@"+status.user.screen_name+" どういたしましてっ ＞ω＜"
-              post message
-            elsif status.text =~ /ぴんぐ/
-              message = "@"+status.user.screen_name+" ぽんぐ"
-              post message
-            else
-              if @domarcovflg
-                flg = false
-                while flg == false
-                  flg = self.dbmarcov "@" << status.user.screen_name << " "
-                end
-              end
-            end
-          end
+      # botチェック
+      if self.botchk status.user.screen_name
+        next
+      end
+
+      @logfile.info("<<get RP " << status.user.screen_name << ": " << status.text << " ID:" << status.id.to_s)
+
+      senceflg = false
+      sencelist.each do | word |
+        if status.text =~ Regexp.new(word[1])
+          sql = "select sence_word_list from sence_word_list where parent_id=" << word[0].to_s << ";"
+          rep = @db.execute(sql)
+          d = rand(rep.size)
+          message = "@" << status.user.screen_name << rep[d][0]
+          post message
+          senceflg = true
+          break
+        end
+      end
+      if @domarcovflg
+        if senceflg == false
+          self.dbmarcov "@" << status.user.screen_name << " "
         end
       end
     end
+    @lastrepdt = Time.now
   end
 
 
+  # マルコフ連鎖 3要素版
   def dbmarcov heading
     text = String.new
     text = ""
@@ -422,6 +378,46 @@ class TwitterBot
   end
   
 
+  # マルコフ連鎖 2要素版
+  def dbmarcov2 heading
+    text = String.new
+    text = ""
+
+    maxlen = rand(100) + 40
+
+    # 最初の1語用ランダム生成
+    sql = "select * from post_elem;"
+    result = @db.execute(sql)
+    datasize = result.size
+
+    d = rand(datasize)
+
+    t1 = result[d][2]
+    new_text = heading + t1
+
+    # 続きを生成
+    while true
+      # 最大も自重になったらループを抜ける
+      break if new_text.size > maxlen
+
+
+      # 要素1要素2と同じものをSELECTする
+      sql = "select * from post_elem where elem1='" << t1 << "';"
+      result = @db.execute(sql)
+      break if result.size == 0
+
+      d = rand(result.size)
+
+      # 選択したものをくっつける
+      new_text = new_text + result[d][3]
+      #break if result[d][4] == "EOS"
+      t1 = result[d][3]
+    end
+    post new_text.gsub(/EOS$/,'')
+    return true
+  end
+
+  # めかぶかける前に特定文字列を削除
   def mecabexclude str
     a = str.sub(/^.*: /," ")
     a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
@@ -438,11 +434,38 @@ class TwitterBot
     return a
   end
 
+
+  # bot判定
+  def botchk user
+    sql = "select bot_name from botlist;"
+    failflg = true
+    bot = Array.new
+    while failflg
+      begin
+        bots = @db.execute(sql)
+      rescue
+        sleep(5)
+      else
+        failflg = false
+      end
+    end
+
+    bots.each do | bot |
+      if user == bot[0]
+        @logfile.debug("FUNC: bot match:" << bot[0])
+        return true
+      end
+    end
+    return false
+  end
+
+  # ポスト
   def post message
     failflg = true
     while failflg
       begin
         @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
+        #p message
       rescue
         @logfile.warn(">>send fail: " << message)
         sleep(30)

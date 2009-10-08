@@ -5,12 +5,21 @@ CREATE INDEX post_elem_index on post_elem (id);
 CREATE INDEX post_elem_post_index on post_elem (post_id);
 CREATE INDEX post_elem_post_index1 on post_elem (elem1);
 CREATE INDEX post_elem_post_index2 on post_elem (elem2);
+
 CREATE TABLE reply_word (id integer, word text);
 CREATE INDEX reply_word_index on reply_word (id);
 CREATE INDEX reply_word_index2 on reply_word (word);
 CREATE TABLE reply_word_list(id integer, parent_id integer, reply_word);
 CREATE INDEX reply_word_list_index on reply_word_list (id);
 CREATE INDEX reply_word_list_index2 on reply_word_list (parent_id);
+
+CREATE TABLE sence_word (id integer, word text);
+CREATE INDEX sence_word_index on sence_word (id);
+CREATE INDEX sence_word_index2 on sence_word (word);
+CREATE TABLE sence_word_list(id integer, parent_id integer, sence_word_list text);
+CREATE INDEX sence_word_list_index on sence_word_list (id);
+CREATE INDEX sence_word_list_index2 on sence_word_list (parent_id);
+
 CREATE TABLE botlist (id integer, bot_name text);
 CREATE INDEX botlist_index on botlist (id);
 CREATE INDEX botlist_index2 on botlist (bot_name);
@@ -37,6 +46,17 @@ insert into reply_word_list values(9, 5,  ' ぎゅっとぎゅっとー');
 insert into reply_word_list values(10, 6,  ' ｣(･ ω ･｣) ｶﾞｯ');
 insert into reply_word_list values(11, 6,  ' ヽ( ・∀・)ﾉ┌┛ガッ');
 insert into reply_word_list values(12, 6,  ' ■━⊂(　・∀・) 彡 ガッ');
+
+insert into sence_word values(1, '(かわい|可愛|かあい|かーいー)');
+insert into sence_word values(2, 'ありがと');
+insert into sence_word values(3, 'ぴんぐ');
+
+insert into sence_word_list values(1, 1,  ' ありがとね (〃▽〃)');
+insert into sence_word_list values(2, 1,  ' さんも可愛いよ ｡＞ω＜｡');
+insert into sence_word_list values(3, 2,  ' どういたしましてっ ＞ω＜');
+insert into sence_word_list values(4, 2,  ' お礼なんて… ＞ω＜');
+insert into sence_word_list values(5, 3,  ' ぽんぐ');
+insert into sence_word_list values(6, 3,  ' ぽーんぽん');
 
 insert into botlist values(1, 'mirubot');
 insert into botlist values(2, 'ha_ma');
