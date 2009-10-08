@@ -31,6 +31,7 @@ insert into reply_word values(3, 'ちゅっちゅ');
 insert into reply_word values(4, 'なでなで');
 insert into reply_word values(5, 'ぎゅー');
 insert into reply_word values(6, 'ぬるぽ');
+insert into reply_word values(7,'(みる|miru|ミル|みるたん)(ぼっと|ボット|bot)');
 
 insert into reply_word_list values(1, 1, ' ヾ（｡＞‿＜｡ ） いいこいいこ');
 insert into reply_word_list values(2, 1,  ' うんうん');
@@ -46,6 +47,11 @@ insert into reply_word_list values(9, 5,  ' ぎゅっとぎゅっとー');
 insert into reply_word_list values(10, 6,  ' ｣(･ ω ･｣) ｶﾞｯ');
 insert into reply_word_list values(11, 6,  ' ヽ( ・∀・)ﾉ┌┛ガッ');
 insert into reply_word_list values(12, 6,  ' ■━⊂(　・∀・) 彡 ガッ');
+insert into reply_word_list values(13,7,'喚びました？');
+insert into reply_word_list values(14,7,'はいはーい');
+insert into reply_word_list values(15,7,'｜ω＜）');
+insert into reply_word_list values(16,7,'｜彡サッ');
+
 
 insert into sence_word values(1, '(かわい|可愛|かあい|かーいー)');
 insert into sence_word values(2, 'ありがと');
