@@ -18,6 +18,7 @@ class TwitterBot
   def initialize client
     @client = client
     @count = 0
+    @retmax = 2
     @workingmin = 30  # min
     @workingth = 20   # post count
     @timewait = 60*3  # sec
@@ -124,12 +125,17 @@ class TwitterBot
   # 仕事してください
   def workingnow
     # フレンドリスト取得
+    retcount = 0
     failflg = true
     while failflg
       begin
         friends = @client.my(:friends)
       rescue
         @logfile.warn("Friends get faild")
+        retcount += 1
+        if retcount >= @retmax
+          failflg = true
+        end
         sleep(60)
       else
         failflg = false
