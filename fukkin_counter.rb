@@ -120,8 +120,8 @@ class TwitterBot
         sql = "select * from fukkin where user_name = '" << user << "';"
         result = @db.execute(sql)
         @logfile.info("SQL execute: " << sql)
-        if (lastdt.yday == (postdt.yday-1)) || ((lastdt.yday==365)&&(postdt.yday==1)) || ((lastdt.yday==366)&&(postdt.yday==1))
-          # 日付が連続してる場合はインクリメント
+        if (lastdt + 129600 ) > postdt
+          # 36時間以内の場合はインクリメント
           sql = "update fukkin set last_date=" << postdt.to_i.to_s << ", total_count=" << (result[0][2]+1).to_s << ", continuity_count=" << (result[0][3]+1).to_s << " where user_name='" << user << "';"
           @db.execute(sql)
           @logfile.info("SQL execute: " << sql)

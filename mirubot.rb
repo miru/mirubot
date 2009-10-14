@@ -21,7 +21,7 @@ class TwitterBot
     @workingmin = 30  # min
     @workingth = 20   # post count
     @timewait = 60*3  # sec
-    @idleth = 5       # idle threthold
+    @idleth = 10      # idle threthold
 
     @idlecount = 0
     @lastid = 0
@@ -48,7 +48,7 @@ class TwitterBot
     elem_cnt = @db.execute(sql)
 
     message = "現在の保存ポスト数: " << post_cnt[0][0].to_s << "  形態素解析数: " << elem_cnt[0][0].to_s << " ですよー #botinfo"
-    #post message
+    post message
 
     while true
       starttime = Time.now
@@ -144,9 +144,6 @@ class TwitterBot
           failflg2 = true
           count = 0
           while failflg2
-            if count>5
-              next
-            end
             count += 1
             begin
               userrss = RSS::Parser.parse(rss)
@@ -156,6 +153,9 @@ class TwitterBot
               next
             else
               failflg2 = false
+            end
+            if count>5
+              next
             end
           end
 
