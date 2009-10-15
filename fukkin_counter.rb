@@ -27,7 +27,7 @@ class TwitterBot
 
   def run
     @logfile = Logger.new("./fukkin_counter.log")
-    @logfile.level = Logger::INFO
+    @logfile.level = Logger::DEBUG
     @logfile.info("Startup fukkin counter")
     while true
       starttime = Time.now
@@ -47,7 +47,7 @@ class TwitterBot
           failflg = false
           # ユーザーごとにチェック
           friends.each do | user |
-            @logfile.debug("Check user" << user.screen_name)
+            @logfile.debug("Check user: " << user.screen_name)
             self.gettimeline user.screen_name
           end
         end
@@ -88,10 +88,6 @@ class TwitterBot
 
   def fukkin_inc status
     user = status.user.screen_name
-    lastdt = Time.new
-    postdt = Time.new
-
-    #p status.created_at.to_i
 
     # 保存されているユーザのポストの最後のIDを取得
     sql = "select max(last_date) from fukkin where user_name = '" << user << "';"
@@ -100,8 +96,7 @@ class TwitterBot
 
     if result[0][0] == nil
       # ユーザーをDBに登録
-      dt = Time.now.to_i
-      lastdate = dt
+      lastdate = Time.now.to_i
       sql = "insert into fukkin values('" << user << "', " << dt.to_s << ", 1, 1);"
       result = @db.execute(sql)
       @logfile.info("Create new user: " << user)
@@ -110,36 +105,33 @@ class TwitterBot
       post message
     else
       # 登録されていれば最後の実行日を取得
-      lastdate = result[0][0]
-
-      lastdt = Time.at(lastdate.to_i)
-      postdt = status.created_at
+      lastdt = result[0][0]
+      postdt = status.created_at.to_i
       
-      # 保存されてる最後のものより新しければDB更新
-      if lastdt.yday < postdt.yday
+      sql = "select * from fukkin where user_name = '" << user << "';"
+      result = @db.execute(sql)
+      @logfile.info("SQL execute: " << sql)
+      if (lastdt + 129600 ) > postdt
+        # 36時間以内の場合はインクリメント
+        sql = "update fukkin set last_date=" << postdt.to_i.to_s << ", total_count=" << (result[0][2]+1).to_s << ", continuity_count=" << (result[0][3]+1).to_s << " where user_name='" << user << "';"
+        @db.execute(sql)
+        @logfile.info("SQL execute: " << sql)
         sql = "select * from fukkin where user_name = '" << user << "';"
         result = @db.execute(sql)
+
         @logfile.info("SQL execute: " << sql)
-        if (lastdt + 129600 ) > postdt
-          # 36時間以内の場合はインクリメント
-          sql = "update fukkin set last_date=" << postdt.to_i.to_s << ", total_count=" << (result[0][2]+1).to_s << ", continuity_count=" << (result[0][3]+1).to_s << " where user_name='" << user << "';"
-          @db.execute(sql)
-          @logfile.info("SQL execute: " << sql)
-          sql = "select * from fukkin where user_name = '" << user << "';"
-          result = @db.execute(sql)
-          @logfile.info("SQL execute: " << sql)
-          message = "@" << user << " さんは、" << (result[0][3]).to_s << "日連続で腹筋しています（カウント合計 " <<  (result[0][2]).to_s << "回）"
-          post message
-        else
-          # 日付が連続じゃない場合は1に戻す
-          sql = "update fukkin set last_date=" << postdt.to_i.to_s << ", total_count=" << (result[0][2]+1).to_s << ", continuity_count=1 where user_name='" << user << "';"
-          @db.execute(sql)
-          sql = "select * from fukkin where user_name = '" << user << "';"
-          result = @db.execute(sql)
-          @logfile.info("SQL execute: " << sql)
-          message = "@" << user << " さんが、腹筋を再開しました（カウント合計 " <<  (result[0][2]).to_s << "回）"
-          post message
-        end
+        message = "@" << user << " さんは、" << (result[0][3]).to_s << "日連続で腹筋しています（カウント合計 " <<  (result[0][2]).to_s << "回）"
+        post message
+      else
+        # 36時間以内じゃない場合は1に戻す
+        sql = "update fukkin set last_date=" << postdt.to_i.to_s << ", total_count=" << (result[0][2]+1).to_s << ", continuity_count=1 where user_name='" << user << "';"
+        @db.execute(sql)
+        sql = "select * from fukkin where user_name = '" << user << "';"
+        result = @db.execute(sql)
+
+        @logfile.info("SQL execute: " << sql)
+        message = "@" << user << " さんが、腹筋を再開しました（カウント合計 " <<  (result[0][2]).to_s << "回）"
+        post message
       end
     end
   end
