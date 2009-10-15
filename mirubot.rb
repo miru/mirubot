@@ -319,7 +319,6 @@ class TwitterBot
   # マルコフ連鎖 3要素版
   def dbmarcov heading
     text = String.new
-    text = ""
 
     maxlen = rand(100) + 40
 
