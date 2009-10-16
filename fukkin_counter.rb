@@ -97,7 +97,7 @@ class TwitterBot
     if result[0][0] == nil
       # ユーザーをDBに登録
       lastdate = Time.now.to_i
-      sql = "insert into fukkin values('" << user << "', " << dt.to_s << ", 1, 1);"
+      sql = "insert into fukkin values('" << user << "', " << lastdate.to_s << ", 1, 1);"
       result = @db.execute(sql)
       @logfile.info("Create new user: " << user)
       @logfile.info("SQL execute: " << sql)
@@ -105,13 +105,15 @@ class TwitterBot
       post message
     else
       # 登録されていれば最後の実行日を取得
-      lastdt = result[0][0]
+      lastdt = result[0][0].to_i
       postdt = status.created_at.to_i
-      
-      sql = "select * from fukkin where user_name = '" << user << "';"
-      result = @db.execute(sql)
-      @logfile.info("SQL execute: " << sql)
-      if (lastdt + 129600 ) > postdt
+
+      # 最後のカウントより古いポストなら無視
+      if lastdt > postdt
+        return
+      end
+
+      if ((lastdt+129600 ) > postdt) && ((lastdt+43200) < postdt)
         # 36時間以内の場合はインクリメント
         sql = "update fukkin set last_date=" << postdt.to_i.to_s << ", total_count=" << (result[0][2]+1).to_s << ", continuity_count=" << (result[0][3]+1).to_s << " where user_name='" << user << "';"
         @db.execute(sql)
@@ -122,7 +124,7 @@ class TwitterBot
         @logfile.info("SQL execute: " << sql)
         message = "@" << user << " さんは、" << (result[0][3]).to_s << "日連続で腹筋しています（カウント合計 " <<  (result[0][2]).to_s << "回）"
         post message
-      else
+      elsif (lastdt+129600) < postdt
         # 36時間以内じゃない場合は1に戻す
         sql = "update fukkin set last_date=" << postdt.to_i.to_s << ", total_count=" << (result[0][2]+1).to_s << ", continuity_count=1 where user_name='" << user << "';"
         @db.execute(sql)
@@ -142,6 +144,7 @@ class TwitterBot
     while failflg
       begin
         @client.status(:post,Kconv.kconv(message,Kconv::UTF8))
+        #p message
       rescue
         @logfile.warn(">>send fail: "+message)
         sleep(30)
