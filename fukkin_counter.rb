@@ -113,6 +113,9 @@ class TwitterBot
         return
       end
 
+      sql = "select * from fukkin where user_name='" << user << "';"
+      result = @db.execute(sql)
+
       if ((lastdt+129600 ) > postdt) && ((lastdt+43200) < postdt)
         # 36時間以内の場合はインクリメント
         sql = "update fukkin set last_date=" << postdt.to_i.to_s << ", total_count=" << (result[0][2]+1).to_s << ", continuity_count=" << (result[0][3]+1).to_s << " where user_name='" << user << "';"
