@@ -312,8 +312,11 @@ class TwitterBot
         if senceflg == false
           if @marcovtoggle 
             self.dbmarcov "@" << status.user.screen_name << " "
+            @marcovtoggle = false
           else
             self.dbmarcov2 "@" << status.user.screen_name << " "
+            @marcovgoggle = true
+          end
         end
       end
     end
