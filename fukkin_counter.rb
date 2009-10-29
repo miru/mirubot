@@ -16,7 +16,7 @@ $KCODE = "UTF-8"
 class TwitterBot
   def initialize client
     @client = client
-    @timewait = 60*5  # sec
+    @timewait = 60*6  # sec
     @replyfirst = true
 
     @db=SQLite3::Database.new('fukkin_counter.sqlite3')

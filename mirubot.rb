@@ -31,6 +31,7 @@ class TwitterBot
 
     @doworkingnowflg = true
     @domarcovflg = true
+    @marcovtoggle = true
 
     @db=SQLite3::Database.new('mirubot.sqlite3')
     @db.type_translation = true
@@ -63,22 +64,23 @@ class TwitterBot
       if @idlecount >= @idleth
 
         # 仕事してください
-        if @doworkingnowflg
-          time = Time.now
-          if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 18)
-            @logfile.info("Do workingnow")
-            self.workingnow
-          end
-        end
+        #if @doworkingnowflg
+        #  time = Time.now
+        #  if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 18)
+        #    @logfile.info("Do workingnow")
+        #    self.workingnow
+        #  end
+        #end
         
         # マルコフ連鎖ポスト
         if @domarcovflg
           @logfile.info("Do marcov")
-          flg = false
-          while flg == false
-            flg = self.dbmarcov ""
-            sleep(60)
+          if @marcovtoggle
+            self.dbmarcov ""
+            @marcovtoggle = false
+          else
             self.dbmarcov2 ""
+            @marcovtoggle = true
           end
           @idlecount = 0
         end
@@ -308,7 +310,10 @@ class TwitterBot
       end
       if @domarcovflg
         if senceflg == false
-          self.dbmarcov "@" << status.user.screen_name << " "
+          if @marcovtoggle 
+            self.dbmarcov "@" << status.user.screen_name << " "
+          else
+            self.dbmarcov2 "@" << status.user.screen_name << " "
         end
       end
     end
