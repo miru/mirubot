@@ -16,7 +16,7 @@ $KCODE = "UTF-8"
 class TwitterBot
   def initialize client
     @client = client
-    @timewait = 60*6  # sec
+    @timewait = 60*3
     @replyfirst = true
 
     @db=SQLite3::Database.new('fukkin_counter.sqlite3')
@@ -35,23 +35,15 @@ class TwitterBot
       # タイムラインチェック
       @logfile.info("Do gettimeline")
       
-      # ユーザー一覧取得
       failflg = true
       while failflg
         begin
-          friends = @client.my(:friends)
-        rescue
-          @logfile.warn("Friends get faild")
-          sleep(60)
-        else
-          failflg = false
-          # ユーザーごとにチェック
-          friends.each do | user |
-            @logfile.debug("Check user: " << user.screen_name)
-            self.gettimeline user.screen_name
-          end
-        end
-      end
+        timeline=@client.timeline_for(:friends, :id => @lastid)
+      rescue
+        @logfile.warn("Timeline get failed")
+        sleep(60)
+      else
+        failflg = false
       
       difftime = Time.now - starttime
       if difftime < @timewait
