@@ -331,7 +331,7 @@ class TwitterBot
     maxlen = rand(100) + 40
 
     # 最初の1語用ランダム生成
-    sql = "select * from post_elem;"
+    sql = "select * from post_elem where word_index=1;"
     failflg = true
     result = Array.new
     while failflg
@@ -393,7 +393,7 @@ class TwitterBot
     maxlen = rand(100) + 40
 
     # 最初の1語用ランダム生成
-    sql = "select * from post_elem;"
+    sql = "select * from post_elem whewe word_index=1;"
     result = @db.execute(sql)
     datasize = result.size
 

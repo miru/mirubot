@@ -1,10 +1,11 @@
 CREATE TABLE posts (id integer, user text, status_text text);
 CREATE INDEX post_index on posts (id);
-CREATE TABLE post_elem (id integer, post_id integer, elem1 text, elem2 text, elem3 text);
+CREATE TABLE post_elem (id integer, post_id integer, elem1 text, elem2 text, elem3 text, word_index integer);
 CREATE INDEX post_elem_index on post_elem (id);
 CREATE INDEX post_elem_post_index on post_elem (post_id);
 CREATE INDEX post_elem_post_index1 on post_elem (elem1);
 CREATE INDEX post_elem_post_index2 on post_elem (elem2);
+CREATE INDEX post_elem_post_index3 on post_elem (word_index);
 
 CREATE TABLE reply_word (id integer, word text);
 CREATE INDEX reply_word_index on reply_word (id);

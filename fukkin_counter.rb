@@ -38,13 +38,22 @@ class TwitterBot
       failflg = true
       while failflg
         begin
-        timeline=@client.timeline_for(:friends, :id => @lastid)
-      rescue
-        @logfile.warn("Timeline get failed")
-        sleep(60)
-      else
-        failflg = false
-      
+          timeline=@client.timeline_for(:friends, :id => @lastid)
+        rescue
+          @logfile.warn("Timeline get failed")
+          sleep(60)
+        else
+          failflg = false
+        end
+      end
+          
+      timeline.each do | status |
+        if status.text =~ /(腹筋|ふっきん).*(なう|ナウ)/
+          @logfile.info("Call fukkin inc for " << status.user.screen_name )
+          self.fukkin_inc status
+        end
+      end
+
       difftime = Time.now - starttime
       if difftime < @timewait
         t = @timewait - difftime
@@ -54,30 +63,6 @@ class TwitterBot
     end
   end
   
-
-  def gettimeline user
-    # タイムライン取得
-    failflg = true
-    while failflg
-      begin
-        timeline=@client.timeline_for(:user, :id => user)
-      rescue
-        @logfile.warn("Timeline get failed" & user)
-        sleep(60)
-      else
-        failflg = false
-      end
-    end
-    
-    timeline.each do | status |
-      if status.text =~ /(腹筋|ふっきん).*(なう|ナウ)/
-        @logfile.info("Call fukkin inc for " << user )
-        self.fukkin_inc status
-      end
-    end
-    
-  end
-
   def fukkin_inc status
     user = status.user.screen_name
 

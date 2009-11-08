@@ -114,6 +114,7 @@ class TwitterBot
   def mecabstore status
     sql = "select max(id) from post_elem;"
     failflg = true
+    idx = 0
     result = Array.new
     while failflg
       begin
@@ -153,8 +154,8 @@ class TwitterBot
       end
 
       maxid += 1
-      sql = "insert into post_elem values(" << maxid.to_s << ", " << status.id.to_s << ", '" << a[0] << "', '" << a[1] << "', '" << a[2] << "');"
-
+      idx += 1
+      sql = "insert into post_elem values(" << maxid.to_s << ", " << status.id.to_s << ", '" << a[0] << "', '" << a[1] << "', '" << a[2] << "', " << idx.to_s << ");"
       failflg = true
       while failflg
         begin
