@@ -24,6 +24,7 @@ class TwitterBot
     @idleth = 10      # idle threthold
 
     @idlecount = 0
+    @botcount = 0
     @lastid = 0
 
     @lastdt = Time.new
@@ -210,10 +211,6 @@ class TwitterBot
   def mecabreply status
     sql = "select bot_name from botlist;"
 
-    if self.botchk status.user.screen_name
-      return
-    end
-
     mecab = MeCab::Tagger.new("-Ochasen")
     a = self.mecabexclude status.text
     node = mecab.parseToNode(a)
@@ -256,7 +253,6 @@ class TwitterBot
           r = rand(result.size)
           message = "@" << status.user.screen_name << " " << result[r][0]
           post message
-
           break
         end
       end
@@ -291,7 +287,10 @@ class TwitterBot
 
       # botチェック
       if self.botchk status.user.screen_name
-        next
+        if @botcount > 3
+          @botcount = 0
+          next
+        end
       end
 
       @logfile.info("<<get RP " << status.user.screen_name << ": " << status.text << " ID:" << status.id.to_s)
@@ -393,7 +392,7 @@ class TwitterBot
     maxlen = rand(100) + 40
 
     # 最初の1語用ランダム生成
-    sql = "select * from post_elem whewe word_index=1;"
+    sql = "select * from post_elem where word_index=1;"
     result = @db.execute(sql)
     datasize = result.size
 
