@@ -15,7 +15,7 @@ require 'sqlite3'
 class TwitterBot
   def initialize client
     @client = client
-    @timewait = 60*2
+    @timewait = 60*3
     
     @db=SQLite3::Database.new('mirubot.sqlite3')
     @db.type_translation = true
@@ -33,6 +33,8 @@ class TwitterBot
       # タイムラインチェック
       @logfile.info("Do gettimeline")
       self.gettimeline
+      # @logfile.info("Do getmentions")
+      # self.getmentions
 
       difftime = Time.now - starttime
       if difftime < @timewait
@@ -51,7 +53,7 @@ class TwitterBot
     failflg = true
     while failflg
       begin
-        timeline=@client.timeline_for(:friends, :id => @lastid)
+        timeline=@client.timeline_for(:friends, :count => 100)
       rescue
         @logfile.warn("Timeline get failed")
         sleep(60)
@@ -61,7 +63,7 @@ class TwitterBot
     end
 
     timeline.each do | status |
-      # @logfile.info("GET TL " << status.user.screen_name << ": " << status.text)
+      @logfile.debug("GET TL " << status.user.screen_name << ": " << status.text)
 
       # 重複してたら次
       sql = "select id from posts where id = " << status.id.to_s << ";"
@@ -70,7 +72,77 @@ class TwitterBot
         begin
           result = @db.execute(sql)
         rescue
-          sleep(rand(5))
+          sleep(5)
+        else
+          failflg = false
+        end
+      end
+      if result.size != 0
+        @logfile.debug("SKIP: " << status.user.screen_name << " dup post")
+        next
+      end
+
+      # DBにポストを保存
+      sql = "insert into posts values(" << status.id.to_s << ", \'" << status.user.screen_name << "\', \'" << status.text << "\'," << status.created_at.to_i.to_s << " );"
+      failflg = true
+      while failflg
+        begin
+          @db.execute(sql)
+        rescue
+          sleep(5)
+        else
+          failflg = false
+        end
+      end
+      @logfile.info("STORE: " << status.user.screen_name << ": " << status.text)
+
+      # 特定ユーザだけmecabにかける
+      sql = "select user from mecabuser;"
+      failflg = true
+      while failflg
+        begin
+          result = @db.execute(sql)
+        rescue
+          sleep(5)
+        else
+          failflg = false
+        end
+      end
+      result.each do | u |
+        if status.user.screen_name == u[0]
+          self.mecabstore status
+          @logfile.info("MECAB STORE: " << status.user.screen_name << ": " << status.text)
+        end
+      end
+    end
+
+  end
+
+  # mentionsタイムライン取得
+  def getmentions
+    result = Array.new()
+
+    failflg = true
+    while failflg
+      begin
+        timeline=@client.timeline_for(:replies, :count => 100)
+      rescue
+        @logfile.warn("Timeline get failed")
+        sleep(60)
+      else
+        failflg = false
+      end
+    end
+
+    timeline.each do | status |
+      # 重複してたら次
+      sql = "select id from posts where id = " << status.id.to_s << ";"
+      failflg = true
+      while failflg
+        begin
+          result = @db.execute(sql)
+        rescue
+          sleep(5)
         else
           failflg = false
         end
@@ -86,7 +158,7 @@ class TwitterBot
         begin
           @db.execute(sql)
         rescue
-          sleep(rand(5))
+          sleep(5)
         else
           failflg = false
         end
@@ -100,7 +172,7 @@ class TwitterBot
         begin
           result = @db.execute(sql)
         rescue
-          sleep(rand(5))
+          sleep(5)
         else
           failflg = false
         end
@@ -125,7 +197,7 @@ class TwitterBot
       begin
         result = @db.execute(sql)
       rescue
-        sleep(rand(5))
+        sleep(5)
       else
         failflg = false
       end
@@ -166,7 +238,7 @@ class TwitterBot
         begin
           @db.execute(sql)
         rescue
-          sleep(rand(5))
+          sleep(5)
         else
           failflg = false
         end

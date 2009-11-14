@@ -85,6 +85,17 @@ insert into mecabuser values(6,"y_beta");
 insert into mecabuser values(7,"tetetep");
 insert into mecabuser values(8,"kynbit");
 insert into mecabuser values(9,"nicovideo_tag");
+insert into mecabuser values(10,"noripi_BE5D");
+insert into mecabuser values(11,"tokkari");
+insert into mecabuser values(12,"mrkn");
+insert into mecabuser values(13,"toaplus");
+insert into mecabuser values(14,"NSXG");
+insert into mecabuser values(15,"kozakana");
+insert into mecabuser values(16,"dancom");
+insert into mecabuser values(17,"Trifecta_beta");
+insert into mecabuser values(18,"kazusap");
+insert into mecabuser values(19,"hemo57");
+
 
 insert into lastpost values(1,"normal","0");
 insert into lastpost values(2,"reply","0");
