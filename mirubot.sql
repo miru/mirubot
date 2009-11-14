@@ -1,4 +1,4 @@
-CREATE TABLE posts (id integer, user text, status_text text);
+CREATE TABLE posts (id integer, user text, status_text text, dt integer);
 CREATE INDEX post_index on posts (id);
 CREATE TABLE post_elem (id integer, post_id integer, elem1 text, elem2 text, elem3 text, word_index integer);
 CREATE INDEX post_elem_index on post_elem (id);
@@ -24,6 +24,11 @@ CREATE INDEX sence_word_list_index2 on sence_word_list (parent_id);
 CREATE TABLE botlist (id integer, bot_name text);
 CREATE INDEX botlist_index on botlist (id);
 CREATE INDEX botlist_index2 on botlist (bot_name);
+
+CREAte TABLE mecabuser (id integer, user text);
+CREATE INDEX mecabuser_index on mecabuser(id);
+
+create table lastpost (id integer, name text, last integer);
 
 
 insert into reply_word values(1, 'はーい');
@@ -70,4 +75,17 @@ insert into botlist values(2, 'ha_ma');
 insert into botlist values(3, 'wakatter');
 insert into botlist values(4, 'ichiyonnana_bot');
 insert into botlist values(5, 'ha_ru_ka');
+
+insert into mecabuser values(1,"miru");
+insert into mecabuser values(2,"mirupon");
+insert into mecabuser values(3,"ritsuca");
+insert into mecabuser values(4,"yamifuu_");
+insert into mecabuser values(5,"myu65");
+insert into mecabuser values(6,"y_beta");
+insert into mecabuser values(7,"tetetep");
+insert into mecabuser values(8,"kynbit");
+insert into mecabuser values(9,"nicovideo_tag");
+
+insert into lastpost values(1,"normal","0");
+insert into lastpost values(2,"reply","0");
 

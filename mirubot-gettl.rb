@@ -15,7 +15,7 @@ require 'sqlite3'
 class TwitterBot
   def initialize client
     @client = client
-    @timewait = 60*10
+    @timewait = 60*2
     
     @db=SQLite3::Database.new('mirubot.sqlite3')
     @db.type_translation = true
@@ -32,19 +32,7 @@ class TwitterBot
 
       # タイムラインチェック
       @logfile.info("Do gettimeline")
-      self.gettimeline "miru"
-      self.gettimeline "mirupon"
-      self.gettimeline "ritsuca"
-      self.gettimeline "yamifuu"
-      self.gettimeline "myu65"
-      self.gettimeline "y_beta"
-      self.gettimeline "tetetep"
-      self.gettimeline "kynbit"
-      self.gettimeline "wakatter"
-      self.gettimeline "ha_ma"
-      self.gettimeline "ichiyonnana_bot"
-      self.gettimeline "nicovideo_tag"
-      #self.gettimeline ""
+      self.gettimeline
 
       difftime = Time.now - starttime
       if difftime < @timewait
@@ -55,62 +43,79 @@ class TwitterBot
     end
   end
 
-  # 通常タイムライン取得
-  def gettimeline userid
-    lastid = 0
-    @logfile.info("Get timeline: " << userid)
-    
-    # 保存されているユーザのポストの最後のIDを取得
-    sql = "select max(id) from posts where user = '" << userid << "';"
-    failflg = true
-    result = Array.new
-    while failflg
-      begin
-        result = @db.execute(sql)
-      rescue
-        sleep(5)
-      else
-        failflg = false
-      end
-    end
 
-    lastid = result[0][0].to_i
-    
-    # タイムライン取得
+  # 通常タイムライン取得
+  def gettimeline
+    result = Array.new()
+
     failflg = true
     while failflg
       begin
-        timeline=@client.timeline_for(:user, :id => userid)
+        timeline=@client.timeline_for(:friends, :id => @lastid)
       rescue
-        @logfile.warn("Timeline " << userid << "get failed")
+        @logfile.warn("Timeline get failed")
         sleep(60)
       else
         failflg = false
       end
     end
-    
+
     timeline.each do | status |
-      
-      if status.id.to_i > lastid
-        # SQLite3にデータ保存
-        sql="insert into posts values(" << status.id.to_s << ", \'" << status.user.screen_name << "\', \'" << status.text << "\' );"
-        failflg = true
-        while failflg
-          begin
-            @db.execute(sql)
-          rescue
-            sleep(5)
-          else
-            failflg = false
-          end
+      # @logfile.info("GET TL " << status.user.screen_name << ": " << status.text)
+
+      # 重複してたら次
+      sql = "select id from posts where id = " << status.id.to_s << ";"
+      failflg = true
+      while failflg
+        begin
+          result = @db.execute(sql)
+        rescue
+          sleep(rand(5))
+        else
+          failflg = false
         end
-        @logfile.debug("SQL: " << sql )
-        
-        self.mecabstore status
+      end
+      if result.size != 0
+        next
+      end
+
+      # DBにポストを保存
+      sql = "insert into posts values(" << status.id.to_s << ", \'" << status.user.screen_name << "\', \'" << status.text << "\'," << status.created_at.to_i.to_s << " );"
+      failflg = true
+      while failflg
+        begin
+          @db.execute(sql)
+        rescue
+          sleep(rand(5))
+        else
+          failflg = false
+        end
+      end
+      @logfile.info("STORE: " << status.user.screen_name << ": " << status.text)
+
+      # 特定ユーザだけmecabにかける
+      sql = "select user from mecabuser;"
+      failflg = true
+      while failflg
+        begin
+          result = @db.execute(sql)
+        rescue
+          sleep(rand(5))
+        else
+          failflg = false
+        end
+      end
+      
+      result.each do | u |
+        if status.user.screen_name == u[0]
+          self.mecabstore status
+          @logfile.info("MECAB STORE: " << status.user.screen_name << ": " << status.text)
+        end
       end
     end
   end
-  
+
+  # ポストをmecabにかけて保存
   def mecabstore status
     sql = "select max(id) from post_elem;"
     failflg = true
@@ -120,7 +125,7 @@ class TwitterBot
       begin
         result = @db.execute(sql)
       rescue
-        sleep(5)
+        sleep(rand(5))
       else
         failflg = false
       end
@@ -161,7 +166,7 @@ class TwitterBot
         begin
           @db.execute(sql)
         rescue
-          sleep(5)
+          sleep(rand(5))
         else
           failflg = false
         end
@@ -169,7 +174,8 @@ class TwitterBot
       @logfile.debug("SQL: " << sql )
     end
   end
-  
+
+  # 例外文字
   def mecabexclude str
     a = str.sub(/^.*: /," ")
     a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
