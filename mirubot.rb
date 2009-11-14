@@ -17,10 +17,11 @@ require 'sqlite3'
 class TwitterBot
   def initialize client
     @client = client
-    @timewait = 60*3  # sec
 
-    @workingmin = 30  # min
-    @workingth  = 15   # post count
+    @timewait = 60*2       # sec
+    @autoposttime = 60*20  # sec
+    @workingmin = 30       # min
+    @workingth  = 15       # post count
 
     @botcount = 0
     @doworkingnowflg = false
@@ -47,9 +48,9 @@ class TwitterBot
   
   
   def run
-    @logfile = Logger.new("./mirubot.log")
-    @logfile.level = Logger::INFO
-    @logfile.info("Startup mirubot")
+    @log = Logger.new("./mirubot.log")
+    @log.level = Logger::INFO
+    @log.info("Startup mirubot")
     
     sql = "select count() from post_elem;"
     elem_cnt = @db.execute(sql)
@@ -62,10 +63,10 @@ class TwitterBot
       starttime = Time.now
       
       # タイムラインチェック
-      @logfile.info("Check timeline from DB")
+      @log.info("Check timeline from DB")
       posts = Array.new()
       sql = "select user,status_text,rowid from posts where rowid > " << @normalid.to_s << ";"
-      @logfile.debug("SQL: " << sql)
+      @log.debug("SQL: " << sql)
       failflg = true
       while failflg
         begin
@@ -78,7 +79,7 @@ class TwitterBot
       end
       
       posts.each do | po |
-        @logfile.info("TL: " << po[0] << ": " << po[1])
+        @log.info("TL: " << po[0] << ": " << po[1])
 
         # リプライチェック
         if po[1] =~ /(@mirubot|みるぼっと)/
@@ -94,7 +95,7 @@ class TwitterBot
           if po[0] == "mirubot"
             next
           end
-          @logfile.info("SENSE ID: " << po[0] << ": " << po[1])
+          @log.info("SENSE ID: " << po[0] << ": " << po[1])
           self.dbmarcov "@" << po[0] << " "
           next
         end
@@ -110,7 +111,7 @@ class TwitterBot
       
       # 最終チェック時刻あぷでと
       sql = "update lastpost set last = " << @normalid.to_s << " where name = 'normal';"
-      @logfile.debug("SQL: " << sql)
+      @log.debug("SQL: " << sql)
       failflg = true
       while failflg
         begin
@@ -121,22 +122,22 @@ class TwitterBot
           failflg = false
         end
       end
-      @logfile.info("@normalid:" << @normalid.to_s)
+      @log.info("@normalid:" << @normalid.to_s)
 
-      # 30分に1度発動
-      if (@lastmarcovdt.to_i + 60*30) < Time.now().to_i
+      # XX分に1度発動
+      if (@lastmarcovdt.to_i + @autoposttime) < Time.now().to_i
         # 仕事してください
         if @doworkingnowflg
           #time = Time.now
           #if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 18)
-            @logfile.info("Do workingnow")
+            @log.info("Do workingnow")
             self.workingnow
           #end
         end
         
         # マルコフ連鎖ポスト
         if @domarcovflg
-          @logfile.info("Do marcov")
+          @log.info("Do marcov")
           self.dbmarcov ""
         end
         @lastmarcovdt = Time.now()
@@ -145,7 +146,7 @@ class TwitterBot
       difftime = Time.now - starttime
       if difftime < @timewait
         t = @timewait - difftime
-        @logfile.info("## sleep " << t.to_s << "sec")
+        @log.info("## sleep " << t.to_s << "sec")
         sleep(t)
       end
     end
@@ -170,11 +171,11 @@ class TwitterBot
         failflg = false
       end
     end
-    @logfile.debug("SQL: " << sql)
+    @log.debug("SQL: " << sql)
     
     while node
       nodefull = node.surface << " " << node.feature
-      @logfile.debug("mecab: "+nodefull)
+      @log.debug("mecab: "+nodefull)
       
       words.each do | word |
         if nodefull =~ Regexp.new(word[1])
@@ -192,7 +193,7 @@ class TwitterBot
             end
           end
           
-          @logfile.info("SQL: " << sql)
+          @log.info("SQL: " << sql)
           r = rand(result.size)
           message = "@" << user << " " << result[r][0]
           post message
@@ -306,7 +307,7 @@ class TwitterBot
 
     bots.each do | bot |
       if user == bot[0]
-        @logfile.debug("FUNC: bot match:" << bot[0])
+        @log.debug("FUNC: bot match:" << bot[0])
         return true
       end
     end
@@ -339,10 +340,10 @@ class TwitterBot
         @client.status(:post,Kconv.kconv(message << "ですの",Kconv::UTF8))
         #p message
       rescue
-        @logfile.warn(">>send fail: " << message)
+        @log.warn(">>send fail: " << message)
         sleep(60)
       else
-        @logfile.info(">>send message: " << message)
+        @log.info(">>send message: " << message)
         failflg = false
       end
     end

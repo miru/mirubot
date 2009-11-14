@@ -12,10 +12,12 @@ require "MeCab"
 require 'logger'
 require 'sqlite3'
 
+$KCODE = "UTF-8"
+
 class TwitterBot
   def initialize client
     @client = client
-    @timewait = 60*3
+    @timewait = 60*2
     
     @db=SQLite3::Database.new('mirubot.sqlite3')
     @db.type_translation = true
@@ -23,23 +25,23 @@ class TwitterBot
   end
   
   def run
-    @logfile = Logger.new("./mirubot-gettl.log")
-    @logfile.level = Logger::INFO
-    @logfile.info("Startup mirubot logget")
+    @log = Logger.new("./mirubot-gettl.log")
+    @log.level = Logger::INFO
+    @log.info("Startup mirubot logget")
 
     while true
       starttime = Time.now
 
       # タイムラインチェック
-      @logfile.info("Do gettimeline")
+      @log.info("Do gettimeline")
       self.gettimeline
-      # @logfile.info("Do getmentions")
+      # @log.info("Do getmentions")
       # self.getmentions
 
       difftime = Time.now - starttime
       if difftime < @timewait
         t = @timewait - difftime
-        @logfile.info("## sleep " << t.to_s << "sec")
+        @log.info("## sleep " << t.to_s << "sec")
         sleep(t)
       end
     end
@@ -55,7 +57,7 @@ class TwitterBot
       begin
         timeline=@client.timeline_for(:friends, :count => 100)
       rescue
-        @logfile.warn("Timeline get failed")
+        @log.warn("Timeline get failed")
         sleep(60)
       else
         failflg = false
@@ -63,7 +65,7 @@ class TwitterBot
     end
 
     timeline.each do | status |
-      @logfile.debug("GET TL " << status.user.screen_name << ": " << status.text)
+      @log.debug("GET TL " << status.user.screen_name << ": " << status.text)
 
       # 重複してたら次
       sql = "select id from posts where id = " << status.id.to_s << ";"
@@ -78,23 +80,25 @@ class TwitterBot
         end
       end
       if result.size != 0
-        @logfile.debug("SKIP: " << status.user.screen_name << " dup post")
+        @log.debug("SKIP: " << status.user.screen_name << " dup post")
         next
       end
 
       # DBにポストを保存
-      sql = "insert into posts values(" << status.id.to_s << ", \'" << status.user.screen_name << "\', \'" << status.text << "\'," << status.created_at.to_i.to_s << " );"
+      sql = "insert into posts values(" << status.id.to_s << ", \'" << status.user.screen_name << "', '" \
+      << status.text.gsub(/\'/,"''") << "'," << status.created_at.to_i.to_s << " );"
       failflg = true
       while failflg
         begin
           @db.execute(sql)
         rescue
+          @log.info("SQLERR: " << sql )
           sleep(5)
         else
           failflg = false
         end
       end
-      @logfile.info("STORE: " << status.user.screen_name << ": " << status.text)
+      @log.info("STORE: " << status.user.screen_name << ": " << status.text)
 
       # 特定ユーザだけmecabにかける
       sql = "select user from mecabuser;"
@@ -111,7 +115,7 @@ class TwitterBot
       result.each do | u |
         if status.user.screen_name == u[0]
           self.mecabstore status
-          @logfile.info("MECAB STORE: " << status.user.screen_name << ": " << status.text)
+          @log.info("MECAB STORE: " << status.user.screen_name << ": " << status.text)
         end
       end
     end
@@ -127,7 +131,7 @@ class TwitterBot
       begin
         timeline=@client.timeline_for(:replies, :count => 100)
       rescue
-        @logfile.warn("Timeline get failed")
+        @log.warn("Timeline get failed")
         sleep(60)
       else
         failflg = false
@@ -163,7 +167,7 @@ class TwitterBot
           failflg = false
         end
       end
-      @logfile.info("STORE: " << status.user.screen_name << ": " << status.text)
+      @log.info("STORE: " << status.user.screen_name << ": " << status.text)
 
       # 特定ユーザだけmecabにかける
       sql = "select user from mecabuser;"
@@ -181,7 +185,7 @@ class TwitterBot
       result.each do | u |
         if status.user.screen_name == u[0]
           self.mecabstore status
-          @logfile.info("MECAB STORE: " << status.user.screen_name << ": " << status.text)
+          @log.info("MECAB STORE: " << status.user.screen_name << ": " << status.text)
         end
       end
     end
@@ -243,7 +247,7 @@ class TwitterBot
           failflg = false
         end
       end
-      @logfile.debug("SQL: " << sql )
+      @log.debug("SQL: " << sql )
     end
   end
 
@@ -260,7 +264,7 @@ class TwitterBot
     a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/," ")
     a = a.gsub(/[A-Za-z]+/," ")
-    a = a.gsub(/[:\.,\/_\*\"]+/," ")
+    a = a.gsub(/[:\.,\/_\*\"\']+/," ")
     a = a.gsub(/ですね、わかります/," ")
     #a = a.gsub(/☆彡/," ")
     return a
