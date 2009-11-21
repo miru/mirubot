@@ -51,21 +51,24 @@ class TwitterBot
     @log = Logger.new("./mirubot.log")
     @log.level = Logger::INFO
     @log.info("Startup mirubot")
+     
+    doneuser = Array.new
     
     sql = "select count() from post_elem;"
     elem_cnt = @db.execute(sql)
-    
     message = "現在の形態素解析数: " << elem_cnt[0][0].to_s
     post message
+
     
     # メインループ
     while true
       starttime = Time.now
+      doneuser.clear
       
       # タイムラインチェック
       @log.info("Check timeline from DB")
       posts = Array.new()
-      sql = "select user,status_text,rowid from posts where rowid > " << @normalid.to_s << ";"
+      sql = "select user,status_text,rowid from posts where rowid > " << @normalid.to_s << " order by dt;"
       @log.debug("SQL: " << sql)
       failflg = true
       while failflg
@@ -81,28 +84,45 @@ class TwitterBot
       posts.each do | po |
         @log.info("TL: " << po[0] << ": " << po[1])
 
+        # 自分は除外
+        if po[0] =~ /mirubot/
+          next
+        end
+
+        # 1回の取得で1ユーザーあたり1回のみ反応
+        doneflg = false
+        doneuser.each do | u |
+          if u == po[0]
+            doneflg = true
+          end
+        end
+        if doneflg == true
+          @log.info("SKIP: Already replied: " << po[0])
+          next
+        end
+        
         # リプライチェック
-        if po[1] =~ /(@mirubot|みるぼっと)/
+        if po[1] =~ /(\@mirubot|みるぼっと)/
+          # botはカウントして除外
           if self.botchk po[0]
             @botcount += 1
+            @log.info("SENCE BOT: COUNT:" << @botcount.to_s << " -> " << po[0] << ": " << po[1])
+            if @botcount > 10
+              @botcount = 0
+            elsif @botcount > 3
+              next
+            end
           end
-          if @botcount > 10
-            @botcount = 0
-          end
-          if @botcount > 3
-            next
-          end
-          if po[0] == "mirubot"
-            next
-          end
+
           @log.info("SENSE ID: " << po[0] << ": " << po[1])
           self.dbmarcov "@" << po[0] << " "
+          doneuser.push(po[0])
           next
         end
         
         # めかぶキーワードチェック
         self.mecabreply(po[0], po[1])
-
+        
         # 最大ROWIDを保存
         if @normalid < po[2].to_i
           @normalid = po[2].to_i
@@ -232,6 +252,7 @@ class TwitterBot
   
   # マルコフ連鎖 3要素版
   def dbmarcov heading
+    st = Time.now().to_i
     text = String.new
     maxlen = rand(60) + 80
     
@@ -286,6 +307,9 @@ class TwitterBot
       t2 = result[d][4]
     end
     post new_text.gsub(/EOS$/,'')
+
+    ed = Time.now().to_i
+    @log.info("MARCOV PROC: " << (ed-st).to_s )
     return true
   end
 

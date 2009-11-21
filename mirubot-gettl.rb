@@ -84,6 +84,16 @@ class TwitterBot
         next
       end
 
+      # 自分のポストは保存しない
+      if status.user.screen_name == "mirubot"
+        next
+      end
+
+      # 挨拶ははじく
+      if status.text =~ /^(おはよう|おやす|おつ|おつあり|おかえり|おかあり)/
+        next
+      end
+
       # DBにポストを保存
       sql = "insert into posts values(" << status.id.to_s << ", \'" << status.user.screen_name << "', '" \
       << status.text.gsub(/\'/,"''") << "'," << status.created_at.to_i.to_s << " );"
