@@ -17,7 +17,7 @@ $KCODE = "UTF-8"
 class TwitterBot
   def initialize client
     @client = client
-    @timewait = 60*2
+    @timewait = 90
     
     @db=SQLite3::Database.new('mirubot.sqlite3')
     @db.type_translation = true
@@ -90,7 +90,12 @@ class TwitterBot
       end
 
       # 挨拶ははじく
-      if status.text =~ /^(おはよう|おやす|おつ|おつあり|おかえり|おかあり)/
+      if status.text =~ /(おはよう|おやす|おつ|おつあり|おかえり|おかあり)/
+        next
+      end
+
+      # NG
+      if status.text =~ /(えろ|せっくす|セックス|姓|夢精|ちんちん|まんこ|おめこ|妊娠)/
         next
       end
 
@@ -234,7 +239,7 @@ class TwitterBot
       if a[0]=="を"
         next
       end
-      if a[1]=="☆" and a[2]=="彡"
+      if a[0]=="☆" and ( a[1]=="彡" or  a[1]=="ﾐ" )
         next
       end
       if (a[0]=="な") && (a[1]=="の") && (a[2]=="よ")
@@ -265,17 +270,18 @@ class TwitterBot
   def mecabexclude str
     a = str.sub(/^.*: /," ")
     a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
-    a = a.gsub(/[＞＜⌒＞＜←→　]/," ")
+    #a = a.gsub(/[＞＜⌒＞＜←→　]/," ")
     a = a.gsub(/【.*】/," ")
-    a = a.gsub(/（.*）/," ")
-    a = a.gsub(/[「」]/," ")
+    #a = a.gsub(/（.*）/," ")
+    #a = a.gsub(/[「」]/," ")
     a = a.gsub(/\[.*\]/," ")
-    a = a.gsub(/\(.*\)/," ")
+    #a = a.gsub(/\(.*\)/," ")
     a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/," ")
     a = a.gsub(/[A-Za-z]+/," ")
     a = a.gsub(/[:\.,\/_\*\"\']+/," ")
     a = a.gsub(/ですね、わかります/," ")
+    a = a.gsub(/第[0-9]+位/," ")
     #a = a.gsub(/☆彡/," ")
     return a
   end

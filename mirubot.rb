@@ -18,15 +18,12 @@ class TwitterBot
   def initialize client
     @client = client
 
-    @timewait = 60*2       # sec
+    @timewait = 90         # sec
     @autoposttime = 60*20  # sec
     @workingmin = 30       # min
     @workingth  = 15       # post count
 
-    @botcount = 0
-    @doworkingnowflg = false
     @domarcovflg = true
-
     @lastmarcovdt = Time.now()
 
     @db=SQLite3::Database.new('mirubot.sqlite3')
@@ -63,7 +60,6 @@ class TwitterBot
     # メインループ
     while true
       starttime = Time.now
-      doneuser.clear
       
       # タイムラインチェック
       @log.info("Check timeline from DB")
@@ -81,6 +77,7 @@ class TwitterBot
         end
       end
       
+      doneuser.clear
       posts.each do | po |
         @log.info("TL: " << po[0] << ": " << po[1])
 
@@ -89,46 +86,43 @@ class TwitterBot
           next
         end
 
+        # botは1/2の確率で反応する
+        if self.botchk po[0]
+          if rand(1) == 1
+            next
+          end
+        end
+        
         # 1回の取得で1ユーザーあたり1回のみ反応
         doneflg = false
         doneuser.each do | u |
           if u == po[0]
             doneflg = true
+            break
           end
         end
-        if doneflg == true
+        if doneflg
           @log.info("SKIP: Already replied: " << po[0])
           next
         end
         
         # リプライチェック
-        if po[1] =~ /(\@mirubot|みるぼっと)/
-          # botはカウントして除外
-          if self.botchk po[0]
-            @botcount += 1
-            @log.info("SENCE BOT: COUNT:" << @botcount.to_s << " -> " << po[0] << ": " << po[1])
-            if @botcount > 10
-              @botcount = 0
-            elsif @botcount > 3
-              next
-            end
+        if po[1] =~ /(@mirubot|みるぼっと)/
+          self.dbmarcov "@" + po[0] + " "
+          doneuser.push po[0]
+        else
+          # めかぶキーワードチェック
+          if self.mecabreply(po[0], po[1])
+            doneuser.push po[0]
           end
-
-          @log.info("SENSE ID: " << po[0] << ": " << po[1])
-          self.dbmarcov "@" << po[0] << " "
-          doneuser.push(po[0])
-          next
         end
-        
-        # めかぶキーワードチェック
-        self.mecabreply(po[0], po[1])
-        
+
         # 最大ROWIDを保存
         if @normalid < po[2].to_i
           @normalid = po[2].to_i
         end
       end
-      
+    
       # 最終チェック時刻あぷでと
       sql = "update lastpost set last = " << @normalid.to_s << " where name = 'normal';"
       @log.debug("SQL: " << sql)
@@ -143,18 +137,10 @@ class TwitterBot
         end
       end
       @log.info("@normalid:" << @normalid.to_s)
-
+    
+    
       # XX分に1度発動
-      if (@lastmarcovdt.to_i + @autoposttime) < Time.now().to_i
-        # 仕事してください
-        if @doworkingnowflg
-          #time = Time.now
-          #if (time.hour > 9 && time.hour < 12) || (time.hour > 13 && time.hour < 18)
-            @log.info("Do workingnow")
-            self.workingnow
-          #end
-        end
-        
+      if (@lastmarcovdt.to_i + @autoposttime) < Time.now().to_i        
         # マルコフ連鎖ポスト
         if @domarcovflg
           @log.info("Do marcov")
@@ -178,6 +164,7 @@ class TwitterBot
     mecab = MeCab::Tagger.new("-Ochasen")
     a = self.mecabexclude statustext
     node = mecab.parseToNode(a)
+    doflg = false
     
     failflg = true
     words = Array.new
@@ -217,12 +204,14 @@ class TwitterBot
           r = rand(result.size)
           message = "@" << user << " " << result[r][0]
           post message
+          doflg = true
           break
         end
       end
       
       node = node.next
     end
+    return doflg
   end
 
   def workingnow
