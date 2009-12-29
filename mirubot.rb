@@ -18,7 +18,7 @@ class TwitterBot
   def initialize client
     @client = client
 
-    @timewait = 90         # sec
+    @timewait = 60*2       # sec
     @autoposttime = 60*20  # sec
     @workingmin = 30       # min
     @workingth  = 15       # post count
@@ -50,7 +50,7 @@ class TwitterBot
     @log.info("Startup mirubot")
      
     doneuser = Array.new
-    
+
     sql = "select count() from post_elem;"
     elem_cnt = @db.execute(sql)
     message = "現在の形態素解析数: " << elem_cnt[0][0].to_s
@@ -348,6 +348,13 @@ class TwitterBot
   # ポスト
   def post message
     failflg = true
+
+    message = message.gsub(/。$/,"")
+    message = message.gsub(/の$/,"")
+    message = message.gsub(/で$/,"")
+    message = message.gsub(/よね$/,"")
+    message = message.gsub(/です$/,"")
+
     while failflg
       begin
         @client.status(:post,Kconv.kconv(message << "ですの",Kconv::UTF8))
