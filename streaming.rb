@@ -12,18 +12,18 @@ require 'sqlite3'
 $KCODE = "UTF-8"
 
 USERNAME = 'mirubot' # ここを書き換える
-PASSWORD = 'XXXXXXXX' # ここを書き換える
+PASSWORD = 'THogYxav' # ここを書き換える
 
 db=SQLite3::Database.new('mirubot.sqlite3')
 db.type_translation = true
 
-uri = URI.parse('http://stream.twitter.com/follow.json')
+uri = URI.parse('http://stream.twitter.com/1/statuses/filter.json')
 Net::HTTP.start(uri.host, uri.port) do |http|
   request = Net::HTTP::Post.new(uri.request_uri)
   # Streaming APIはBasic認証のみ
   request.basic_auth(USERNAME, PASSWORD)
-  #request.set_form_data('follow' => 'miru,mirupon,tororosoba,ritsuca,yamifuu,myu65,y_beta,tetetep,kynbit,nicovideo_tag')
-  request.set_form_data('follow' => '32789785,4846401,3934431')
+  request.set_form_data('follow' => '32789785,4846401,3934431,14202410')
+  #request.set_form_data('track' => 'hoge')
 
   http.request(request) do |response|
     raise 'Response is not chuncked' unless response.chunked?
@@ -34,7 +34,7 @@ Net::HTTP.start(uri.host, uri.port) do |http|
       next unless status['text']
       user = status['user']
       puts "#{user['screen_name']}: #{status['text']}"
-p status
+#p status
       sql = "insert into posts values(#{status['id']}, \'#{user['screen_name']}\', \'#{status['text']}\' );"
       p sql
       #db.execute(sql)

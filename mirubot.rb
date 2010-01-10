@@ -18,7 +18,7 @@ class TwitterBot
   def initialize client
     @client = client
 
-    @timewait = 60*2       # sec
+    @timewait = 90         # sec
     @autoposttime = 60*20  # sec
     @workingmin = 30       # min
     @workingth  = 15       # post count
@@ -53,7 +53,7 @@ class TwitterBot
 
     sql = "select count() from post_elem;"
     elem_cnt = @db.execute(sql)
-    message = "現在の形態素解析数: " << elem_cnt[0][0].to_s
+    message = "現在の形態素解析数: " + elem_cnt[0][0].to_s
     post message
 
     
@@ -64,8 +64,8 @@ class TwitterBot
       # タイムラインチェック
       @log.info("Check timeline from DB")
       posts = Array.new()
-      sql = "select user,status_text,rowid from posts where rowid > " << @normalid.to_s << " order by dt;"
-      @log.debug("SQL: " << sql)
+      sql = "select user,status_text,rowid from posts where rowid > " + @normalid.to_s + " order by dt;"
+      @log.debug("SQL: " + sql)
       failflg = true
       while failflg
         begin
@@ -79,16 +79,16 @@ class TwitterBot
       
       doneuser.clear
       posts.each do | po |
-        @log.info("TL: " << po[0] << ": " << po[1])
+        @log.debug("TL: " + po[0] + ": " + po[1])
 
         # 自分は除外
         if po[0] =~ /mirubot/
           next
         end
 
-        # botは1/2の確率で反応する
+        # botは1/3の確率で反応する
         if self.botchk po[0]
-          if rand(1) == 1
+          if rand(2) == 0
             next
           end
         end
@@ -102,12 +102,12 @@ class TwitterBot
           end
         end
         if doneflg
-          @log.info("SKIP: Already replied: " << po[0])
+          @log.info("SKIP: Already replied: " + po[0])
           next
         end
         
         # リプライチェック
-        if po[1] =~ /(@mirubot|みるぼっと)/
+        if po[1] =~ /(@mirubot)/
           self.dbmarcov "@" + po[0] + " "
           doneuser.push po[0]
         else
@@ -123,9 +123,9 @@ class TwitterBot
         end
       end
     
-      # 最終チェック時刻あぷでと
-      sql = "update lastpost set last = " << @normalid.to_s << " where name = 'normal';"
-      @log.debug("SQL: " << sql)
+      # 最終チェックあぷでと
+      sql = "update lastpost set last = " + @normalid.to_s + " where name = 'normal';"
+      @log.debug("SQL: " + sql)
       failflg = true
       while failflg
         begin
@@ -136,7 +136,7 @@ class TwitterBot
           failflg = false
         end
       end
-      @log.info("@normalid:" << @normalid.to_s)
+      @log.info("@normalid:" + @normalid.to_s)
     
     
       # XX分に1度発動
@@ -152,7 +152,7 @@ class TwitterBot
       difftime = Time.now - starttime
       if difftime < @timewait
         t = @timewait - difftime
-        @log.info("## sleep " << t.to_s << "sec")
+        @log.info("## sleep " + t.to_s + "sec")
         sleep(t)
       end
     end
@@ -178,15 +178,15 @@ class TwitterBot
         failflg = false
       end
     end
-    @log.debug("SQL: " << sql)
+    @log.debug("SQL: " + sql)
     
     while node
-      nodefull = node.surface << " " << node.feature
+      nodefull = node.surface + " " + node.feature
       @log.debug("mecab: "+nodefull)
       
       words.each do | word |
         if nodefull =~ Regexp.new(word[1])
-          sql = "select reply_word from reply_word_list where parent_id = " << word[0].to_s << ";"
+          sql = "select reply_word from reply_word_list where parent_id = " + word[0].to_s + ";"
           
           failflg = true
           result = Array.new
@@ -200,9 +200,9 @@ class TwitterBot
             end
           end
           
-          @log.info("SQL: " << sql)
+          @log.info("SQL: " + sql)
           r = rand(result.size)
-          message = "@" << user << " " << result[r][0]
+          message = "@" + user + " " + result[r][0]
           post message
           doflg = true
           break
@@ -218,7 +218,7 @@ class TwitterBot
     countfrom = Time.now().to_i - 60*@workingmin
     @workingth  = 20   # post count
     
-    sql = "select user,count(*) from posts where dt > " << countfrom.to_s << " group by user;"
+    sql = "select user,count(*) from posts where dt > " + countfrom.to_s + " group by user;"
     failflg = true
     result = Array.new
     while failflg
@@ -233,7 +233,7 @@ class TwitterBot
 
     result.each do | po |
       if po[0] > @workingth
-        message "@" << po[0] << " " << @workingmin.to_s << "分で" << po[1] << "ポストしちゃってます"
+        message "@" + po[0] + " " + @workingmin.to_s + "分で" + po[1] + "ポストしちゃってます"
         post message
       end
     end
@@ -262,7 +262,7 @@ class TwitterBot
     
     t1 = result[d][2]
     t2 = result[d][3]
-    new_text = heading << t1 << t2
+    new_text = heading + t1 + t2
     
     # 続きを生成
     while true
@@ -270,7 +270,7 @@ class TwitterBot
       break if new_text.size > maxlen
 
       # 要素1要素2と同じものをSELECTする
-      sql = "select * from post_elem where elem1='" << t1 << "' and elem2='" << t2 << "';"
+      sql = "select * from post_elem where elem1='" + t1 + "' and elem2='" + t2 + "';"
       failflg = true
       result = Array.new
       while failflg
@@ -298,7 +298,7 @@ class TwitterBot
     post new_text.gsub(/EOS$/,'')
 
     ed = Time.now().to_i
-    @log.info("MARCOV PROC: " << (ed-st).to_s )
+    @log.info("MARCOV PROC: " + (ed-st).to_s )
     return true
   end
 
@@ -320,7 +320,7 @@ class TwitterBot
 
     bots.each do | bot |
       if user == bot[0]
-        @log.debug("FUNC: bot match:" << bot[0])
+        @log.debug("FUNC: bot match:" + bot[0])
         return true
       end
     end
@@ -357,13 +357,13 @@ class TwitterBot
 
     while failflg
       begin
-        @client.status(:post,Kconv.kconv(message << "ですの",Kconv::UTF8))
+        @client.status(:post,Kconv.kconv(message + "ですの",Kconv::UTF8))
         #p message
       rescue
-        @log.warn(">>send fail: " << message)
+        @log.warn(">>send fail: " + message)
         sleep(60)
       else
-        @log.info(">>send message: " << message)
+        @log.info(">>send message: " + message)
         failflg = false
       end
     end
