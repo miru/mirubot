@@ -12,7 +12,7 @@ require 'sqlite3'
 $KCODE = "UTF-8"
 
 USERNAME = 'mirubot' # ここを書き換える
-PASSWORD = 'THogYxav' # ここを書き換える
+PASSWORD = 'x' # ここを書き換える
 
 db=SQLite3::Database.new('mirubot.sqlite3')
 db.type_translation = true
