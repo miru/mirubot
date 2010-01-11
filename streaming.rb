@@ -1,28 +1,29 @@
 #!/usr/bin/env ruby
-# coding: utf-8
+# -*- coding: utf-8 -*-
 
+require 'rubygems'
 require 'net/http'
 require 'uri'
-require 'rubygems'
 require 'json'
-require "MeCab"
-require 'logger'
-require 'sqlite3'
+#require 'logger'
+#require 'sqlite3'
+require 'prowl'
 
-$KCODE = "UTF-8"
+USERNAME = 'mirubot'  # ここを書き換える
+PASSWORD = 'THogYxav' # ここを書き換える
+PRLAPI = "5d06bf5cf4065b6bbab8362c9acb03749b3e7733"
 
-USERNAME = 'mirubot' # ここを書き換える
-PASSWORD = 'x' # ここを書き換える
+#db=SQLite3::Database.new('mirubot.sqlite3')
+#db.type_translation = true
 
-db=SQLite3::Database.new('mirubot.sqlite3')
-db.type_translation = true
+prl = Prowl.new(PRLAPI)
 
 uri = URI.parse('http://stream.twitter.com/1/statuses/filter.json')
 Net::HTTP.start(uri.host, uri.port) do |http|
   request = Net::HTTP::Post.new(uri.request_uri)
   # Streaming APIはBasic認証のみ
   request.basic_auth(USERNAME, PASSWORD)
-  request.set_form_data('follow' => '32789785,4846401,3934431,14202410')
+  request.set_form_data('follow' => '32789785,4846401,3934431,14202410,15331996')
   #request.set_form_data('track' => 'hoge')
 
   http.request(request) do |response|
@@ -32,11 +33,17 @@ Net::HTTP.start(uri.host, uri.port) do |http|
       status = JSON.parse(chunk) rescue next
       # 削除通知など、'text'パラメータを含まないものは無視して次へ
       next unless status['text']
-      user = status['user']
-      puts "#{user['screen_name']}: #{status['text']}"
+
 #p status
-      sql = "insert into posts values(#{status['id']}, \'#{user['screen_name']}\', \'#{status['text']}\' );"
-      p sql
+#p status['user']
+      user = status['user']['screen_name']
+      text = status['text'].to_s
+      puts user + ": " + text
+      prl.add(:application => "TwNotify", :event => user, :description => status['text'].to_s)
+
+      #p status
+      #sql = "insert into posts values(#{status['id']}, \'#{user['screen_name']}\', \'#{status['text']}\' );"
+      #p sql
       #db.execute(sql)
 
     end

@@ -1,10 +1,11 @@
 #!/usr/bin/ruby
+# -*- coding: utf-8 -*-
 
-require('rubygems')
+require 'rubygems'
 gem('twitter4r', '>=0.3.1')
-require('twitter')
+require 'twitter'
 require 'net/http'
-require 'rexml/document';
+require 'rexml/document'
 require 'kconv'
 require 'rss' 
 require 'webrick'

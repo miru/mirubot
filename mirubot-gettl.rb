@@ -1,18 +1,17 @@
 #!/usr/bin/ruby
+# -*- coding: utf-8 -*-
 
-require('rubygems')
+require 'rubygems'
 gem('twitter4r', '>=0.3.1')
-require('twitter')
+require 'twitter'
 require 'net/http'
-require 'rexml/document';
+require 'rexml/document'
 require 'kconv'
 require 'rss' 
 require 'webrick'
 require "MeCab"
 require 'logger'
 require 'sqlite3'
-
-$KCODE = "UTF-8"
 
 class TwitterBot
   def initialize client
@@ -225,10 +224,15 @@ class TwitterBot
     maxid = result[0][0].to_i
     
     text = self.mecabexclude status.text
+    text = Kconv.kconv(text,Kconv::UTF8)
     
     mecab = MeCab::Tagger.new("-Owakati")
     data = Array.new
     mecab.parse(text + "EOS").split(" ").each_cons(3) do | a |
+
+      a[0] = Kconv.kconv(a[0],Kconv::UTF8)
+      a[1] = Kconv.kconv(a[0],Kconv::UTF8)
+      a[2] = Kconv.kconv(a[0],Kconv::UTF8)
 
       if a[0] =~ /^[ー。、ｗ！]/
         next

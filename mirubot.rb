@@ -1,10 +1,11 @@
 #!/usr/bin/ruby
+# -*- coding: utf-8 -*-
 
-require('rubygems')
+require 'rubygems'
 gem('twitter4r', '>=0.3.1')
-require('twitter')
+require 'twitter'
 require 'net/http'
-require 'rexml/document';
+require 'rexml/document'
 require 'kconv'
 require 'rss' 
 require 'webrick'
@@ -54,7 +55,7 @@ class TwitterBot
     sql = "select count() from post_elem;"
     elem_cnt = @db.execute(sql)
     message = "現在の形態素解析数: " + elem_cnt[0][0].to_s
-    post message
+    #post message
 
     
     # メインループ
@@ -329,7 +330,8 @@ class TwitterBot
 
 
   def mecabexclude str
-    a = str.sub(/^.*: /," ")
+    a = Kconv.kconv(str,Kconv::UTF8)
+    a = a.sub(/^.*: /," ")
     a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
     a = a.gsub(/[＞＜⌒＞＜←→]/," ")
     a = a.gsub(/【.*】/," ")
@@ -349,6 +351,7 @@ class TwitterBot
   def post message
     failflg = true
 
+    message = Kconv.kconv(message,Kconv::UTF8)
     message = message.gsub(/。$/,"")
     message = message.gsub(/の$/,"")
     message = message.gsub(/で$/,"")
@@ -357,7 +360,7 @@ class TwitterBot
 
     while failflg
       begin
-        @client.status(:post,Kconv.kconv(message + "ですの",Kconv::UTF8))
+        @client.status(:post,message + "ですの")
         #p message
       rescue
         @log.warn(">>send fail: " + message)
