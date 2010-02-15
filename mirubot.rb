@@ -31,15 +31,11 @@ class TwitterBot
     @db.type_translation = true
 
     sql = "select last from lastpost where name = 'normal';"
-    failflg = true
-    while failflg
-      begin
-        result = @db.execute(sql)
-      rescue
-        sleep(5)
-      else
-        failflg = false
-      end
+    begin
+      result = @db.execute(sql)
+    rescue
+      sleep(5)
+      retry
     end
     @normalid = result[0][0].to_i
   end
@@ -54,7 +50,7 @@ class TwitterBot
 
     sql = "select count() from post_elem;"
     elem_cnt = @db.execute(sql)
-    message = "現在の形態素解析数: " + elem_cnt[0][0].to_s
+    message = "現在の形態素解析数: " + elem_cnt[0][0].to_s + " "
     #post message
 
     
@@ -127,15 +123,11 @@ class TwitterBot
       # 最終チェックあぷでと
       sql = "update lastpost set last = " + @normalid.to_s + " where name = 'normal';"
       @log.debug("SQL: " + sql)
-      failflg = true
-      while failflg
-        begin
-          @db.execute(sql)
-        rescue
-          sleep(5)
-        else
-          failflg = false
-        end
+      begin
+        @db.execute(sql)
+      rescue
+        sleep(5)
+        retry
       end
       @log.info("@normalid:" + @normalid.to_s)
     
@@ -167,17 +159,13 @@ class TwitterBot
     node = mecab.parseToNode(a)
     doflg = false
     
-    failflg = true
     words = Array.new
     sql = "select id,word from reply_word;"
-    while failflg
-      begin
-        words = @db.execute(sql)
-      rescue
-        sleep(5)
-      else
-        failflg = false
-      end
+    begin
+      words = @db.execute(sql)
+    rescue
+      sleep(5)
+      retry
     end
     @log.debug("SQL: " + sql)
     
@@ -189,16 +177,12 @@ class TwitterBot
         if nodefull =~ Regexp.new(word[1])
           sql = "select reply_word from reply_word_list where parent_id = " + word[0].to_s + ";"
           
-          failflg = true
           result = Array.new
-          while failflg
-            begin
-              result = @db.execute(sql)
-            rescue
-              sleep(5)
-            else
-              failflg = false
-            end
+          begin
+            result = @db.execute(sql)
+          rescue
+            sleep(5)
+            retry
           end
           
           @log.info("SQL: " + sql)
@@ -220,16 +204,11 @@ class TwitterBot
     @workingth  = 20   # post count
     
     sql = "select user,count(*) from posts where dt > " + countfrom.to_s + " group by user;"
-    failflg = true
-    result = Array.new
-    while failflg
-      begin
-        result = @db.execute(sql)
-      rescue
-        sleep(5)
-      else
-        failflg = false
-      end
+    begin
+      result = @db.execute(sql)
+    rescue
+      sleep(5)
+      retry
     end
 
     result.each do | po |
@@ -248,17 +227,14 @@ class TwitterBot
     
     # 最初の1語用ランダム生成
     sql = "select * from post_elem where word_index=1;"
-    failflg = true
     result = Array.new
-    while failflg
-      begin
-        result = @db.execute(sql)
-      rescue
-        sleep(5)
-      else
-        failflg = false
-      end
+    begin
+      result = @db.execute(sql)
+    rescue
+      sleep(5)
+      retry
     end
+
     d = rand(result.size)
     
     t1 = result[d][2]
@@ -272,16 +248,12 @@ class TwitterBot
 
       # 要素1要素2と同じものをSELECTする
       sql = "select * from post_elem where elem1='" + t1 + "' and elem2='" + t2 + "';"
-      failflg = true
       result = Array.new
-      while failflg
-        begin
-          result = @db.execute(sql)
-        rescue
-          sleep(5)
-        else
-          failflg = false
-        end
+      begin
+        result = @db.execute(sql)
+      rescue
+        sleep(5)
+        retry
       end
 
       # なかったらループを抜ける
@@ -289,6 +261,9 @@ class TwitterBot
 
       # ランダムで選択
       d = rand(result.size)
+
+      # 連呼避け
+      break if (t1==result[d][4]) and (t2==result[d][4])
 
       # 選択したものをくっつける
       new_text = new_text + result[d][4]
@@ -307,16 +282,12 @@ class TwitterBot
   # bot判定
   def botchk user
     sql = "select bot_name from botlist;"
-    failflg = true
     bot = Array.new
-    while failflg
-      begin
-        bots = @db.execute(sql)
-      rescue
-        sleep(5)
-      else
-        failflg = false
-      end
+    begin
+      bots = @db.execute(sql)
+    rescue
+      sleep(5)
+      retry
     end
 
     bots.each do | bot |
@@ -330,45 +301,39 @@ class TwitterBot
 
 
   def mecabexclude str
-    a = Kconv.kconv(str,Kconv::UTF8)
-    a = a.sub(/^.*: /," ")
-    a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
-    a = a.gsub(/[＞＜⌒＞＜←→]/," ")
-    a = a.gsub(/【.*】/," ")
-    a = a.gsub(/（.*）/," ")
-    a = a.gsub(/[「」]/," ")
+    #a = Kconv.kconv(str,Kconv::UTF8)
+    a = str
+    a = a.gsub(/\'/, "''")
     a = a.gsub(/\[.*\]/," ")
-    a = a.gsub(/\(.*\)/," ")
+    a = a.gsub(/(https?|ftp)(:\/\/[-_\.\!\~\*\'\(\)a-zA-Z0-9;\/?:\@\&=+\$,\%\#]+)/," ")
     a = a.gsub(/\n/," ")
     a = a.gsub(/@[A-Za-z0-9_]+/," ")
+    a = Kconv.kconv(a,Kconv::UTF8)
+    a = a.gsub(/【.*】/," ")
+    #a = a.gsub(/（.*）/," ")
+    #a = a.gsub(/[「」]/," ")
+    #a = a.gsub(/\[.*\]/," ")
+    #a = a.gsub(/\(.*\)/," ")
     #a = a.gsub(/[A-Za-z]+/," ")
-    a = a.gsub(/[:\.,\/_\*\"]+/," ")
+    #a = a.gsub(/[:\.,\/_\*\"]+/," ")
     return a
   end
 
 
   # ポスト
   def post message
-    failflg = true
-
     message = Kconv.kconv(message,Kconv::UTF8)
-    message = message.gsub(/。$/,"")
-    message = message.gsub(/の$/,"")
-    message = message.gsub(/で$/,"")
+    message = message.gsub(/[\(\[]$/,"")
+    message = message.gsub(/[。，、のっで]$/,"")
     message = message.gsub(/よね$/,"")
-    message = message.gsub(/です$/,"")
+    message = message.gsub(/です.*/,"")
 
-    while failflg
-      begin
-        @client.status(:post,message + "ですの")
-        #p message
-      rescue
-        @log.warn(">>send fail: " + message)
-        sleep(60)
-      else
-        @log.info(">>send message: " + message)
-        failflg = false
-      end
+    begin
+      @client.status(:post,message + "ですの")
+      #p message
+    rescue
+      @log.warn(">>send fail: " + message)
+      sleep(60)
     end
   end
 
@@ -376,8 +341,8 @@ end
 
 
 # main
-#WEBrick::Daemon.start {
-	client=Twitter::Client.from_config('/home/miru/bin/mirubot-conf.yaml','bot')
-	bot=TwitterBot.new client
-	bot.run
-#}
+$PROGRAM_NAME = "mirubot-post"
+
+client=Twitter::Client.from_config('/home/miru/bin/mirubot-conf.yaml','bot')
+bot=TwitterBot.new client
+bot.run

@@ -51,16 +51,11 @@ class TwitterBot
   def gettimeline
     result = Array.new()
 
-    failflg = true
-    while failflg
-      begin
-        timeline=@client.timeline_for(:friends, :count => 100)
-      rescue
-        @log.warn("Timeline get failed")
-        sleep(60)
-      else
-        failflg = false
-      end
+    begin
+      timeline=@client.timeline_for(:friends, :count => 200)
+    rescue
+      @log.warn("Timeline get failed. exit.")
+      exit 1
     end
 
     timeline.each do | status |
@@ -68,15 +63,11 @@ class TwitterBot
 
       # 重複してたら次
       sql = "select id from posts where id = " + status.id.to_s + ";"
-      failflg = true
-      while failflg
-        begin
-          result = @db.execute(sql)
-        rescue
-          sleep(5)
-        else
-          failflg = false
-        end
+      begin
+        result = @db.execute(sql)
+      rescue
+        sleep(5)
+        retry
       end
       if result.size != 0
         @log.debug("SKIP: " + status.user.screen_name + " dup post")
@@ -89,42 +80,34 @@ class TwitterBot
       end
 
       # 挨拶ははじく
-      if status.text =~ /(おはよう|おやす|おつ|おつあり|おかえり|おかあり)/
-        next
-      end
+      next if status.text =~ /(おはよう|おやす|おつ|おつあり|おかえり|おかあり)/
+
+      # 今ココもはじく
+      next if status.text =~ /((今|いま|イマ|ｲﾏ)(ここ|ココ|ｺｺ|ヘモ|ﾍﾓ)|#imakoko)/
 
       # NG
-      if status.text =~ /(えろ|せっくす|セックス|姓|夢精|ちんちん|まんこ|おめこ|妊娠|精子)/
-        next
-      end
+      next if status.text =~ /(えろ|せっくす|セックス|姓|夢精|チンコ|ちんこ|ちんちん|まんこ|おめこ|妊娠|精子|おっぱい)/
+
 
       # DBにポストを保存
-      sql = "insert into posts values(" + status.id.to_s + ", \'" + status.user.screen_name + "', '" \
-             + status.text.gsub(/\'/,"''") + "'," + status.created_at.to_i.to_s + " );"
-      failflg = true
-      while failflg
-        begin
-          @db.execute(sql)
-        rescue
-          @log.info("SQLERR: " + sql )
-          sleep(5)
-        else
-          failflg = false
-        end
+      sql = "insert into posts values(" + status.id.to_s + ", \'" + Kconv.kconv(status.user.screen_name,Kconv::UTF8) + "', '" \
+             + Kconv.kconv(status.text,Kconv::UTF8).gsub(/\'/,"''") + "'," + status.created_at.to_i.to_s + " );"
+      begin
+        @db.execute(sql)
+      rescue
+        @log.error("SQLERR: " + sql )
+        sleep(5)
+        retry
       end
-      @log.debug("STORE: " + status.user.screen_name + ": " + status.text)
+      @log.info("STORE: " + status.user.screen_name + ": " + status.text)
 
       # 特定ユーザだけmecabにかける
       sql = "select user from mecabuser;"
-      failflg = true
-      while failflg
-        begin
-          result = @db.execute(sql)
-        rescue
-          sleep(5)
-        else
-          failflg = false
-        end
+      begin
+        result = @db.execute(sql)
+      rescue
+        sleep(5)
+        retry
       end
       result.each do | u |
         if status.user.screen_name == u[0]
@@ -140,31 +123,24 @@ class TwitterBot
   def getmentions
     result = Array.new()
 
-    failflg = true
-    while failflg
-      begin
-        timeline=@client.timeline_for(:replies, :count => 100)
-      rescue
-        @log.warn("Timeline get failed")
-        sleep(60)
-      else
-        failflg = false
-      end
+    begin
+      timeline=@client.timeline_for(:replies, :count => 100)
+    rescue
+      @log.warn("Timeline get failed")
+      sleep(60)
+      retry
     end
 
     timeline.each do | status |
       # 重複してたら次
       sql = "select id from posts where id = " + status.id.to_s + ";"
-      failflg = true
-      while failflg
-        begin
-          result = @db.execute(sql)
-        rescue
-          sleep(5)
-        else
-          failflg = false
-        end
+      begin
+        result = @db.execute(sql)
+      rescue
+        sleep(5)
+        retry
       end
+
       if result.size != 0
         next
       end
@@ -172,29 +148,23 @@ class TwitterBot
       # DBにポストを保存
       sql = "insert into posts values(" + status.id.to_s + ", \'" + status.user.screen_name + \
              "\', \'" + status.text + "\'," + status.created_at.to_i.to_s + " );"
-      failflg = true
-      while failflg
-        begin
-          @db.execute(sql)
-        rescue
-          sleep(5)
-        else
-          failflg = false
-        end
+      begin
+        @db.execute(sql)
+      rescue
+        sleep(5)
+        retry
+      else
+        failflg = false
       end
       @log.info("STORE: " + status.user.screen_name + ": " + status.text)
 
       # 特定ユーザだけmecabにかける
       sql = "select user from mecabuser;"
-      failflg = true
-      while failflg
-        begin
-          result = @db.execute(sql)
-        rescue
-          sleep(5)
-        else
-          failflg = false
-        end
+      begin
+        result = @db.execute(sql)
+      rescue
+        sleep(5)
+        retry
       end
       
       result.each do | u |
@@ -212,19 +182,16 @@ class TwitterBot
     failflg = true
     idx = 0
     result = Array.new
-    while failflg
-      begin
-        result = @db.execute(sql)
-      rescue
-        sleep(5)
-      else
-        failflg = false
-      end
+    begin
+      result = @db.execute(sql)
+    rescue
+      sleep(5)
+      retry
     end
     maxid = result[0][0].to_i
     
     text = self.mecabexclude status.text
-    text = Kconv.kconv(text,Kconv::UTF8)
+    #text = Kconv.kconv(text,Kconv::UTF8)
     
     mecab = MeCab::Tagger.new("-Owakati")
     data = Array.new
@@ -234,39 +201,23 @@ class TwitterBot
       a[1] = Kconv.kconv(a[0],Kconv::UTF8)
       a[2] = Kconv.kconv(a[0],Kconv::UTF8)
 
-      if a[0] =~ /^[ー。、ｗ！]/
-        next
-      end
-
-      if a[0]=="ます"
-        next
-      end
-      if a[0]=="を"
-        next
-      end
-      if a[0]=="☆" and ( a[1]=="彡" or  a[1]=="ﾐ" )
-        next
-      end
-      if (a[0]=="な") && (a[1]=="の") && (a[2]=="よ")
-        next
-      end
-      if (a[0]=="の") && (a[1]=="よ") && (a[2]=="。")
-        next
-      end
+      next if a[0] =~ /^[ー。、ｗ！]/
+      next if a[0]=="ます"
+      next if a[0]=="を"
+      next if a[0]=="☆" and ( a[1]=="彡" or  a[1]=="ﾐ" or a[1]=="ミ" )
+      next if (a[0]=="な") and (a[1]=="の") and (a[2]=="よ")
+      next if (a[0]=="の") and (a[1]=="よ") and (a[2]=="。")
+      next if (a[0]==a[1]) and (a[0]==a[2])
 
       maxid += 1
       idx += 1
       sql = "insert into post_elem values(" + maxid.to_s + ", " + status.id.to_s + ", '" \
              + a[0] + "', '" + a[1] + "', '" + a[2] + "', " + idx.to_s + ");"
-      failflg = true
-      while failflg
-        begin
-          @db.execute(sql)
-        rescue
-          sleep(5)
-        else
-          failflg = false
-        end
+      begin
+        @db.execute(sql)
+      rescue
+        sleep(5)
+        retry
       end
       @log.debug("SQL: " + sql )
     end
@@ -279,8 +230,6 @@ class TwitterBot
     a = a.gsub(/\'/,"''")
     #a = a.gsub(/[＞＜⌒＞＜←→　]/," ")
     a = a.gsub(/【.*】/," ")
-    #a = a.gsub(/（.*）/," ")
-    #a = a.gsub(/[「」]/," ")
     a = a.gsub(/\[.*\]/," ")
     #a = a.gsub(/\(.*\)/," ")
     a = a.gsub(/\n/," ")
@@ -289,7 +238,6 @@ class TwitterBot
     #a = a.gsub(/[:\.,\/_\*\"]+/," ")
     a = a.gsub(/ですね、わかります/," ")
     a = a.gsub(/第[0-9]+位/," ")
-    a = a.gsub(/☆?/," ")
     return a
   end
   
@@ -297,6 +245,8 @@ end
 
 
 # main
+$PROGRAM_NAME = "mirubot-gettl"
+
 client=Twitter::Client.from_config('/home/miru/bin/mirubot-conf.yaml','bot')
 bot=TwitterBot.new client
 bot.run
