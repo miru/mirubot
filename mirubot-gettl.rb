@@ -84,9 +84,10 @@ class TwitterBot
 
       # 今ココもはじく
       next if status.text =~ /((今|いま|イマ|ｲﾏ)(ここ|ココ|ｺｺ|ヘモ|ﾍﾓ)|#imakoko)/
+      next if status.text =~ / L:/
 
       # NG
-      next if status.text =~ /(えろ|せっくす|セックス|姓|夢精|チンコ|ちんこ|ちんちん|まんこ|おめこ|妊娠|精子|おっぱい)/
+      next if status.text =~ /(えろ|せっくす|セックス|姓|夢精|チンコ|ちんこ|ちんちん|まんこ|おめこ|妊娠|精子|おっぱい|地震|天気|交通)/
 
 
       # DBにポストを保存
